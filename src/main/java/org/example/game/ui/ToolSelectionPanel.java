@@ -28,6 +28,7 @@ public class ToolSelectionPanel extends JPanel {
     private int toolLabelDescY;
     // Dodaj stałą pozycję dla drugiego JComboBox
     private final int SECOND_COMBOBOX_Y = 2;
+    private JCheckBox hitboxCheckBox;
 
     private final String[] toolNames = {"None", "Tile", "Spike", "Orb", "Pad", "Portals", "Speed"};
     private final String[] portalNames = {"Select", "Cube", "Ship", "Ball", "Ufo", "Wave", "Robot", "Spider"};
@@ -133,6 +134,16 @@ public class ToolSelectionPanel extends JPanel {
             mainWindow.showMainMenu();
         });
         backButtonPanel.add(backButton);
+
+        hitboxCheckBox = new JCheckBox("Show Hitboxes");
+        hitboxCheckBox.setSelected(false); // Domyślnie hitboxy są wyłączone
+        hitboxCheckBox.setFocusPainted(false);
+        hitboxCheckBox.setFont(new Font("Arial", Font.BOLD, 14));
+        hitboxCheckBox.setForeground(Color.WHITE);
+        hitboxCheckBox.setBackground(new Color(60, 60, 60));
+        hitboxCheckBox.addActionListener(e -> mainWindow.getPlayerPanel().setShowHitboxes(hitboxCheckBox.isSelected()));
+        gbc.gridy++;
+        add(hitboxCheckBox, gbc);
 
         setVisible(true);
     }

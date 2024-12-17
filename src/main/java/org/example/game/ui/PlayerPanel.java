@@ -27,6 +27,7 @@ public class PlayerPanel extends JPanel {
     private int cameraOffsetX, cameraOffsetY;
     private final Map<String, Image> orbImages = new HashMap<>();
     private final Map<String, Image> padImages = new HashMap<>();
+    private Image tileImage;
     private Image ballModeImage;
     private Image waveImage;
     private Image robotImage;
@@ -50,6 +51,7 @@ public class PlayerPanel extends JPanel {
     private InputHandler inputHandler;
     private String selectedOrbColor = "yellow";
     private String selectedPadColor = "yellow";
+    private boolean showHitboxes = false;
 
     public PlayerPanel(Player player, World world, MainWindow mainWindow) {
         this.player = player;
@@ -328,6 +330,11 @@ public class PlayerPanel extends JPanel {
             repaint();
         });
 
+        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/Tile.png", img -> {
+            tileImage = img;
+            repaint();
+        });
+
         ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_cube.png", img -> portalImages.put(GameMode.CUBE, img));
         ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_ship.png", img -> portalImages.put(GameMode.SHIP, img));
         ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_ball.png", img -> portalImages.put(GameMode.BALL, img));
@@ -500,6 +507,10 @@ public class PlayerPanel extends JPanel {
 
         Graphics2D g2d = (Graphics2D) g.create();
 
+        // Fill the background with light blue color
+        g2d.setColor(new Color(173, 216, 230)); // Light blue color
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+
         // Przesunięcie kamery
         g2d.translate(-cameraOffsetX, -cameraOffsetY);
 
@@ -509,7 +520,6 @@ public class PlayerPanel extends JPanel {
 
         // Rysowanie świata i gracza
         drawWorldAndPlayer(g2d);
-        drawAttemptText(g2d);
         g2d.dispose();
 
         // Przyciemnienie ekranu, jeśli gra jest zapauzowana
@@ -762,10 +772,17 @@ public class PlayerPanel extends JPanel {
         Rectangle tileBounds = new Rectangle(tile.getX() * 50, tile.getY() * 50, 50, 50);
         if (!cameraBounds.intersects(tileBounds)) return;
 
-        g2d.setColor(Color.GREEN);
-        g2d.fillRect(tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height);
-        g2d.setColor(Color.RED);
-        g2d.drawRect(tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height);
+        if (tileImage != null) {
+            g2d.drawImage(tileImage, tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height, null);
+        } else {
+            g2d.setColor(Color.GREEN);
+            g2d.fillRect(tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height);
+        }
+
+        if (showHitboxes) {
+            g2d.setColor(Color.RED);
+            g2d.drawRect(tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height);
+        }
     }
 
     private void drawSpike(Graphics2D g2d, Spike spike) {
@@ -779,11 +796,13 @@ public class PlayerPanel extends JPanel {
             g2d.fillRect(x, y, 50, 50);
         }
 
-        // (Opcjonalnie) Rysowanie hitboxa
-        g2d.setColor(Color.GREEN);
-        g2d.drawPolygon(new int[]{x, x + 25, x + 50}, new int[]{y + 50, y, y + 50}, 3);
-        g2d.setColor(Color.RED);
-        g2d.drawRect(x + 19, y + 15, 12, 20);
+        if (showHitboxes) {
+            g2d.setColor(Color.GREEN);
+            g2d.drawPolygon(new int[]{x, x + 25, x + 50}, new int[]{y + 50, y, y + 50}, 3);
+            g2d.setColor(Color.RED);
+            g2d.drawRect(x + 19, y + 15, 12, 20);
+        }
+
     }
     private void drawOrb(Graphics2D g2d, Orb orb) {
         int x = orb.getX() * 50;
@@ -799,8 +818,10 @@ public class PlayerPanel extends JPanel {
             g2d.fillOval(x + 12, y + 12, 36, 36);
         }
 
-        g2d.setColor(Color.RED);
-        g2d.drawRect(x, y, 50, 50);
+        if (showHitboxes) {
+            g2d.setColor(Color.RED);
+            g2d.drawRect(x, y, 50, 50);
+        }
     }
     private void drawPad(Graphics2D g2d, Pad pad) {
         int x = pad.getX() * 50;
@@ -815,8 +836,12 @@ public class PlayerPanel extends JPanel {
             g2d.fillRect(x + 12, y + 14, 36, 36);
         }
 
-        g2d.setColor(Color.RED);
-        g2d.drawRect(x, y, 50, 50);
+        if (showHitboxes) {
+            g2d.setColor(Color.RED);
+            g2d.drawRect(x, y, 50, 50);
+        }
+
+
     }
 
     public int getCameraOffsetX() {
@@ -894,6 +919,20 @@ public class PlayerPanel extends JPanel {
 
     public Player getPlayer() {
         return player;
+    }
+
+    public void setShowHitboxes(boolean showHitboxes) {
+        this.showHitboxes = showHitboxes;
+        repaint();
+    }
+
+    public boolean isShowHitboxes() {
+        return showHitboxes;
+    }
+
+    public void toggleShowHitboxes() {
+        this.showHitboxes = !this.showHitboxes;
+        repaint();
     }
 
     public void setPortalSpeedMultiplier(double speedMultiplier) {

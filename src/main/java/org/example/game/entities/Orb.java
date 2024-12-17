@@ -104,8 +104,14 @@ public class Orb {
                 player.setJumping(true);
             }
             case "blue" -> {
-                player.setGravityReversed(!player.isGravityReversed());
-                player.setVelocityY(player.isGravityReversed() ? -16 : 16);
+                if (isShip) {
+                    player.setGravityReversed(!player.isGravityReversed());
+                    player.setVelocityY(player.isGravityReversed() ? -7 : 7);
+                } else {
+                    player.setGravityReversed(!player.isGravityReversed());
+                    player.setVelocityY(player.isGravityReversed() ? -16 : 16);
+                }
+
             }
             case "green" -> {
                 player.setGravityReversed(!player.isGravityReversed());
