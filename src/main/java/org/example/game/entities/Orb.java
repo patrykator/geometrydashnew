@@ -3,6 +3,7 @@ package org.example.game.entities;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import org.example.game.engine.GameEngine;
 
 public class Orb {
     private int x;
@@ -85,6 +86,7 @@ public class Orb {
 
     public void activate(Player player) {
         boolean isShip = player.isShipMode();
+        boolean isBall = player.isBallMode();
 
         switch (color) {
             case "yellow" -> {
@@ -114,6 +116,9 @@ public class Orb {
                 if (isShip) {
                     player.setVelocityY(player.isGravityReversed() ? -16 : 16);
                     player.setOrbEffectActive(true);
+                } else if (isBall) {
+                    player.setVelocityY(player.isGravityReversed() ? 16 : -16);
+                    player.setGravityReversed(!player.isGravityReversed());
                 } else {
                     player.setVelocityY(player.isGravityReversed() ? -16 : 16);
                 }

@@ -571,7 +571,11 @@ public class PlayerPanel extends JPanel {
         // Draw the player based on the current game mode
         if (player.getCurrentGameMode() == GameMode.UFO) {
             if (ufoImage != null) {
-                g2d.drawImage(ufoImage, 0, 0, 50, 50, null);
+                if (player.isGravityReversed()) {
+                    g2d.drawImage(ufoImage, 0, 50, 50, -50, null);
+                } else {
+                    g2d.drawImage(ufoImage, 0, 0, 50, 50, null);
+                }
             } else {
                 g2d.setColor(Color.MAGENTA);
                 g2d.fillRect(0, 0, 50, 50);
@@ -613,14 +617,22 @@ public class PlayerPanel extends JPanel {
             }
         } else if (player.getCurrentGameMode() == GameMode.ROBOT) {
             if (robotImage != null) {
-                g2d.drawImage(robotImage, 0, 0, 50, 50, null);
+                if (player.isGravityReversed()) {
+                    g2d.drawImage(robotImage, 0, 50, 50, -50, null);
+                } else {
+                    g2d.drawImage(robotImage, 0, 0, 50, 50, null);
+                }
             } else {
                 g2d.setColor(Color.PINK);
                 g2d.fillRect(0, 0, 50, 50);
             }
         } else if (player.getCurrentGameMode() == GameMode.SPIDER) {
             if (spiderImage != null) {
-                g2d.drawImage(spiderImage, 0, 0, 50, 50, null);
+                if (player.isGravityReversed()) {
+                    g2d.drawImage(spiderImage, 0, 50, 50, -50, null); // Spider upside down when gravity is reversed
+                } else {
+                    g2d.drawImage(spiderImage, 0, 0, 50, 50, null); // Normal Spider
+                }
             } else {
                 g2d.setColor(Color.ORANGE);
                 g2d.fillRect(0, 0, 50, 50);

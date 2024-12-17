@@ -62,6 +62,8 @@ public class GameEngine implements Runnable {
         mainWindow.setInputHandler(inputHandler); // Ustaw InputHandler w MainWindow
     }
 
+
+
     public void start() {
         running = true;
         Thread gameThread = new Thread(this);
@@ -226,6 +228,8 @@ public class GameEngine implements Runnable {
             player.setVelocityY(currentMinJumpSpeed);
         }
     }
+
+
 
     public GameMode getCurrentGameMode() {
         return currentGameMode;
