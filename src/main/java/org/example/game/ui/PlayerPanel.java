@@ -509,18 +509,7 @@ public class PlayerPanel extends JPanel {
 
         // Rysowanie świata i gracza
         drawWorldAndPlayer(g2d);
-
-
-
-        g2d.dispose();
-
-        g2d = (Graphics2D) g.create();
-        g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("Arial", Font.BOLD, 40));
-        // Rysuj "Tool: ..." tylko w trybie edycji
-        if (!mainWindow.getInputHandler().isEditingMode()) {
-            g2d.drawString("Attempt " + mainWindow.getAttempts(), 200, 720);
-        }
+        drawAttemptText(g2d);
         g2d.dispose();
 
         // Przyciemnienie ekranu, jeśli gra jest zapauzowana
@@ -543,6 +532,14 @@ public class PlayerPanel extends JPanel {
             case 10 -> "Speed Portal";
             default -> "Unknown";
         };
+    }
+
+    private void drawAttemptText(Graphics2D g2d) {
+        g2d.setColor(Color.BLACK);
+        g2d.setFont(new Font("Arial", Font.BOLD, 40));
+        if (!mainWindow.getInputHandler().isEditingMode()) {
+            g2d.drawString("Attempt " + mainWindow.getAttempts(), 200, 700);
+        }
     }
 
     private void drawWorldAndPlayer(Graphics2D g2d) {
@@ -668,7 +665,7 @@ public class PlayerPanel extends JPanel {
         int panelHeight = getHeight() * 5;
 
         // Rysowanie pionowych linii
-        for (int x = 0; x < panelWidth - cameraOffsetX; x += 50) {
+        for (int x = 0; x < panelWidth + cameraOffsetX; x += 50) {
             g2d.drawLine(x, cameraOffsetY, x, panelHeight + cameraOffsetY);
         }
         for (int x = -50; x > cameraOffsetX; x -= 50) {
@@ -676,7 +673,7 @@ public class PlayerPanel extends JPanel {
         }
 
         // Rysowanie poziomych linii
-        for (int y = 0; y < panelHeight - cameraOffsetY; y += 50) {
+        for (int y = 0; y < panelHeight + cameraOffsetY; y += 50) {
             g2d.drawLine(cameraOffsetX, y, panelWidth + cameraOffsetX, y);
         }
         for (int y = -50; y > cameraOffsetY; y -= 50) {

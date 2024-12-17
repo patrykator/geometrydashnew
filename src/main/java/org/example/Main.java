@@ -17,8 +17,10 @@ public class Main {
             Player player = MainWindow.createPlayer();
 
             MainWindow mainWindow = new MainWindow(player, new World()); // Przekazujemy pusty świat
+
             MainWindow.configureMainWindow(mainWindow, gameWidth, gameHeight);
             mainWindow.setVisible(false);
+
 
             MainWindow.setPlayerPosition(player, gameHeight);
 
