@@ -26,7 +26,7 @@ public class Player extends Entity {
     private boolean isShipFlipped;
     private int orbEffectActiveDuration;
 
-    private boolean isPlatformer = true;
+    private boolean isPlatformer = false;
 
     private Image ballModeImage;
 

@@ -325,13 +325,15 @@ public class GameEngine implements Runnable {
             if (player.isPlatformer()) {
                 // Platformer i Ball - obracanie kontrolowane klawiszami
                 if (mainWindow.getPressedKeys().contains(KeyEvent.VK_A)) {
-                    player.setRotationAngle((player.getRotationAngle() - 5) % 360);
+                    player.setRotationAngle((player.getRotationAngle() + (player.isGravityReversed() ? 5 : -5)) % 360);
+
                 } else if (mainWindow.getPressedKeys().contains(KeyEvent.VK_D)) {
-                    player.setRotationAngle((player.getRotationAngle() + 5) % 360);
+                    player.setRotationAngle((player.getRotationAngle() + (player.isGravityReversed() ? -5 : 5)) % 360);
                 }
             } else {
                 // Ball (poza platformerem) - automatyczny obrót
-                player.setRotationAngle((player.getRotationAngle() + 3) % 360);
+                player.setRotationAngle((player.getRotationAngle() + (player.isGravityReversed() ? -3 : 3)) % 360);
+                System.out.println("Gravity" + player.isGravityReversed() + "rotation" + player.getRotationAngle());
             }
 
             // Reszta logiki dla trybu Ball (obsługa grawitacji, kolizji itp.)

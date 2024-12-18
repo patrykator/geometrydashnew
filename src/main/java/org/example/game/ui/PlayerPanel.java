@@ -52,6 +52,7 @@ public class PlayerPanel extends JPanel {
     private String selectedOrbColor = "yellow";
     private String selectedPadColor = "yellow";
     private boolean showHitboxes = false;
+    private boolean isFlipped = false;
 
     public PlayerPanel(Player player, World world, MainWindow mainWindow) {
         this.player = player;
