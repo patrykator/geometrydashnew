@@ -12,6 +12,7 @@ public class World {
     private static List<Pad> pads;
     private List<Portal> portals = new ArrayList<>();
     private List<SpeedPortal> speedPortals = new ArrayList<>();
+    private boolean isPlatformer;
 
 
 
@@ -22,6 +23,7 @@ public class World {
         orbs = new ArrayList<>();
         pads = new ArrayList<>();
         portals = new ArrayList<>();
+        isPlatformer = false;
     }
 
     public List<Tile> getTiles() {
@@ -53,6 +55,14 @@ public class World {
         return spikes;
     }
 
+    public boolean isPlatformer() {
+        return isPlatformer;
+    }
+
+    public void setPlatformer(boolean platformer) {
+        isPlatformer = platformer;
+    }
+
     public void addSpike(Spike spike) {
         spikes.add(spike);
     }
@@ -82,6 +92,7 @@ public class World {
         levelData.setPads(this.pads);
         levelData.setPortals(this.portals);
         levelData.setSpeedPortals(this.speedPortals);
+        levelData.setPlatformer(this.isPlatformer);
         return levelData;
     }
 
@@ -90,6 +101,8 @@ public class World {
         this.spikes.clear();
         this.orbs.clear();
         pads.clear(); // Dodane czyszczenie listy pads
+        portals.clear();
+        speedPortals.clear();
 
         if(levelData == null) return;
 
@@ -113,6 +126,10 @@ public class World {
 
         if (levelData.getSpeedPortals() != null) {
             this.speedPortals.addAll(levelData.getSpeedPortals());
+        }
+
+        if (levelData != null) {
+            this.isPlatformer = levelData.isPlatformer();
         }
     }
 

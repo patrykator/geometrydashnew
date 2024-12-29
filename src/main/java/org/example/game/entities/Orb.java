@@ -37,6 +37,16 @@ public class Orb {
         this.color = color;
     }
 
+    public Orb(int x, int y, String color, String direction) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.direction = direction;
+        this.teleportX = null;
+        this.teleportY = null;
+        this.effectDuration = 0;
+    }
+
 
 
     public int getX() {
@@ -90,18 +100,40 @@ public class Orb {
 
         switch (color) {
             case "yellow" -> {
-                player.setVelocityY(isShip ? -player.getPlayerSpeed()
-                        : player.isGravityReversed() ? 16 : -16);
+                if (isShip) {
+                    // Zmiana: Nadaj prędkość w górę, nie teleportuj
+                    player.setVelocityY(player.isGravityReversed() ? 13 : -13);
+                    player.setOrbEffectActive(true);
+                    player.setOrbEffectDuration(10);
+                } else {
+                    player.setVelocityY(player.isGravityReversed() ? 16 : -16);
+                }
             }
             case "purple" -> {
-                player.setVelocityY(isShip ? -player.getPlayerSpeed() / 2
-                        : player.isGravityReversed() ? 10 : -10);
+                if (isShip) {
+                    // Zmiana: Nadaj prędkość w górę, nie teleportuj
+                    player.setVelocityY(player.isGravityReversed() ? 10 : -10);
+                    player.setOrbEffectActive(true);
+                    player.setOrbEffectDuration(3);
+                } else {
+                    player.setVelocityY(player.isGravityReversed() ? 10 : -10);
+                }
             }
             case "red" -> {
-                player.setVelocityY(-20);
-                player.setOrbEffectDuration(4);
-                System.out.println("Czerwony orb, velocityY: " + player.getVelocityY());
-                player.setJumping(true);
+                if (isShip) {
+                    // Zmiana: Nadaj prędkość w górę, nie teleportuj
+                    player.setVelocityY(player.isGravityReversed() ? 16 : -16);
+                    player.setRedOrbVelocity(player.getVelocityY());
+                    player.setOrbEffectDuration(15);
+                    player.setOrbEffectActive(true);
+                    System.out.println("Czerwony orb, velocityY: " + player.getVelocityY());
+                    player.setJumping(true);
+                } else {
+                    player.setVelocityY(player.isGravityReversed() ? 20 : -20);
+                    player.setOrbEffectDuration(4);
+                    System.out.println("Czerwony orb, velocityY: " + player.getVelocityY());
+                    player.setJumping(true);
+                }
             }
             case "blue" -> {
                 if (isShip) {
@@ -114,14 +146,24 @@ public class Orb {
 
             }
             case "green" -> {
-                player.setGravityReversed(!player.isGravityReversed());
+                if (isShip) {
+                    player.setVelocityY(player.isGravityReversed() ? 10 : -10);
+                    player.setOrbEffectActive(true);
+                    player.setOrbEffectDuration(4);
+                    player.setGravityReversed(!player.isGravityReversed());
+                } else {
+                    player.setJumping(true);
+                    player.setGravityReversed(!player.isGravityReversed());
+                }
                 player.setVelocityY(player.isGravityReversed() ? 16 : -16);
-                if (!isShip) player.setJumping(true);
+
             }
             case "black" -> {
                 if (isShip) {
-                    player.setVelocityY(player.isGravityReversed() ? -16 : 16);
+                    player.setOrbEffectDuration(100);
+                    player.setTargetOrbVelocity(player.isGravityReversed() ? -16 : 16);
                     player.setOrbEffectActive(true);
+                    player.setVelocityY(player.isGravityReversed() ? -16 : 16);
                 } else if (isBall) {
                     player.setVelocityY(player.isGravityReversed() ? 16 : -16);
                     player.setGravityReversed(!player.isGravityReversed());

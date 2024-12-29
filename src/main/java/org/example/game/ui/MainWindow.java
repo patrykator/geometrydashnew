@@ -3,19 +3,17 @@ package org.example.game.ui;
 //import com.google.gson.Gson;
 //import com.google.gson.GsonBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.game.animations.FragmentAnimation;
 import org.example.game.engine.GameEngine;
 import org.example.game.engine.InputHandler;
-import org.example.game.entities.Orb;
-import org.example.game.entities.Pad;
-import org.example.game.entities.Player;
-import org.example.game.entities.Spike;
+import org.example.game.entities.*;
 import org.example.game.world.LevelData;
-import org.example.game.world.Tile;
 import org.example.game.world.World;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -35,6 +33,12 @@ public class MainWindow extends JFrame {
     private String currentLevelPath;
     private JSplitPane splitPane;
     private EditLevelMenu editLevelMenu;
+    public FragmentAnimation fragmentAnimation;
+    private boolean isAnimatingDeath = false;
+    private long animationDelay = 750;
+    private GraphicsDevice graphicsDevice;
+    private DisplayMode originalDisplayMode;
+
 
 
 
@@ -82,7 +86,52 @@ public class MainWindow extends JFrame {
         splitPane.setDividerSize(0);
         add(splitPane, BorderLayout.CENTER);
 
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        graphicsDevice = ge.getDefaultScreenDevice();
+        originalDisplayMode = graphicsDevice.getDisplayMode();
+    }
 
+    public void toggleFullScreen() {
+        MainWindow mainWindow = this;
+        if (isFullScreen) {
+            // Wyjdź z trybu pełnoekranowego
+            dispose(); // Zwolnij zasoby okna
+            setUndecorated(false);
+
+            // Przywróć oryginalny tryb wyświetlania, jeśli to możliwe
+            if (graphicsDevice.isDisplayChangeSupported()) {
+                graphicsDevice.setDisplayMode(originalDisplayMode);
+            }
+
+
+
+            // Ustaw rozmiar okna na oryginalny rozmiar
+            setSize(1600, 900 + 35); // Ustaw domyślny rozmiar okna
+
+            setVisible(true);
+            setLocationRelativeTo(null);
+            isFullScreen = false;
+        } else {
+            dispose(); // Zwolnij zasoby okna
+            setUndecorated(true);
+
+            // Ustaw tryb pełnoekranowy, jeśli to możliwe
+            if (graphicsDevice.isFullScreenSupported()) {
+                // Użyj Exclusive Full-Screen Mode
+                graphicsDevice.setFullScreenWindow(this);
+            } else {
+                // Jeśli Exclusive Full-Screen Mode nie jest wspierany,
+                // ustaw okno na cały ekran
+                setExtendedState(JFrame.MAXIMIZED_BOTH);
+            }
+
+            setVisible(true);
+            isFullScreen = true;
+        }
+    }
+
+    public boolean isFullScreen() {
+        return isFullScreen;
     }
 
     public void startGame(File levelFile) {
@@ -380,6 +429,10 @@ public class MainWindow extends JFrame {
             }
 
             fileName = "src\\levels\\" + fileName;
+
+            boolean isPlatformer = playerPanel.getWorld().isPlatformer();
+            playerPanel.getWorld().setPlatformer(isPlatformer);
+
             saveLevelToJson(playerPanel.getWorld(), fileName);
             JOptionPane.showMessageDialog(this, "Level saved to " + fileName);
         } else {
@@ -406,17 +459,76 @@ public class MainWindow extends JFrame {
     public static void setPlayerPosition(Player player, int gameHeight) {
         player.setX(100);
         player.setY(gameHeight - 100);
-
     }
 
     public void die(Player player, MainWindow mainWindow) {
-        Insets insets = mainWindow.getInsets();
-        int frameHeight = insets.top + insets.bottom;
-        setPlayerPosition(player, getHeight() - frameHeight);
-        player.setVelocityY(0);
-        player.setJumping(false);
-        incrementAttempts();
-        repaint();
+        if (!isAnimatingDeath) {
+            isAnimatingDeath = true;
+            // Rozpocznij animację rozpadu
+            BufferedImage playerImage = null;
+
+            // Pobierz odpowiedni obrazek w zależności od trybu gry
+            if (player.getCurrentGameMode() == GameMode.CUBE) {
+                playerImage = imageToBufferedImage(mainWindow.getPlayerPanel().getPlayerImage());
+            } else if (player.getCurrentGameMode() == GameMode.SHIP) {
+                playerImage = imageToBufferedImage(mainWindow.getPlayerPanel().getShipImage());
+            } else if (player.getCurrentGameMode() == GameMode.BALL) {
+                playerImage = imageToBufferedImage(mainWindow.getPlayerPanel().getBallModeImage());
+            } else if (player.getCurrentGameMode() == GameMode.UFO) {
+                playerImage = imageToBufferedImage(mainWindow.getPlayerPanel().getUfoImage());
+            } else if (player.getCurrentGameMode() == GameMode.WAVE) {
+                playerImage = imageToBufferedImage(mainWindow.getPlayerPanel().getWaveImage());
+            } else if (player.getCurrentGameMode() == GameMode.ROBOT) {
+                playerImage = imageToBufferedImage(mainWindow.getPlayerPanel().getRobotImage());
+            } else if (player.getCurrentGameMode() == GameMode.SPIDER) {
+                playerImage = imageToBufferedImage(mainWindow.getPlayerPanel().getSpiderImage());
+            }
+
+            if (playerImage != null) {
+                // Zwiększ initial speed w FragmentAnimation
+                fragmentAnimation = new FragmentAnimation(player.getX(), player.getY(), playerImage, 8, 8, 4, 0.2); // Zmieniono z 1 na 3
+            }
+
+            // Uruchom wątek, który opóźni respawn
+            new Thread(() -> {
+                while (fragmentAnimation != null && !fragmentAnimation.isAnimationFinished()) {
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+                try {
+                    Thread.sleep(animationDelay);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                SwingUtilities.invokeLater(() -> {
+                    gameEngine.resetGameState();
+                    incrementAttempts();
+                    isAnimatingDeath = false;
+                    player.setCurrentGameMode(GameMode.CUBE);
+                    repaint();
+                });
+            }).start();
+        }
+    }
+
+    private BufferedImage imageToBufferedImage(Image img) {
+        if (img instanceof BufferedImage) {
+            return (BufferedImage) img;
+        }
+        BufferedImage bufferedImage = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D bGr = bufferedImage.createGraphics();
+        bGr.drawImage(img, 0, 0, null);
+        bGr.dispose();
+        return bufferedImage;
+    }
+
+    public boolean isAnimatingDeath() {
+        return isAnimatingDeath;
     }
 
     public InputHandler getInputHandler() {

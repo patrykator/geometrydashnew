@@ -168,12 +168,18 @@ public class GameEngine implements Runnable {
         mainWindow.showMainMenu();
     }
 
-    private void resetGameState() {
+    public void resetGameState() {
         MainWindow.setPlayerPosition(player, mainWindow.getPlayerPanel().getHeight());
         player.setVelocityY(0);
         player.setJumping(false);
         player.setRotationAngle(0); // Zresetuj kąt obrotu
         player.setGravityReversed(false);
+
+
+        player.setOrbEffectDuration(0);
+        player.setOrbEffectActive(false);
+        player.setShipFlipped(false);
+        setCurrentGameMode(GameMode.CUBE);
     }
 
     public void setgamepaused(boolean gamePaused) {
@@ -210,22 +216,27 @@ public class GameEngine implements Runnable {
 
 
     private void updateVelocity() {
-        double currentMinJumpSpeed; // Zmienione na double
-        double maxFallSpeed; // Zmienione na double
+        double currentMinJumpSpeed;
+        double maxFallSpeed;
 
         if (player.getOrbEffectDuration() > 0) {
             currentMinJumpSpeed = -20;
-            maxFallSpeed = player.isGravityReversed() ? 20 : -20;
+            maxFallSpeed = player.isGravityReversed() ? 16 : -16;
             player.setOrbEffectDuration(player.getOrbEffectDuration() - 1);
         } else {
             currentMinJumpSpeed = player.getOriginalMinJumpSpeed();
             maxFallSpeed = 16;
         }
 
-        if (player.getVelocityY() > maxFallSpeed) {
-            player.setVelocityY(maxFallSpeed);
-        } else if (player.getVelocityY() < currentMinJumpSpeed) {
-            player.setVelocityY(currentMinJumpSpeed);
+        // TYMCZASOWO wyłącz ograniczenie prędkości, jeśli orb jest aktywny
+        if (player.isOrbEffectActive() && (player.getCurrentGameMode() == GameMode.SHIP)) {
+            return;
+        } else {
+            if (player.getVelocityY() > maxFallSpeed) {
+                player.setVelocityY(maxFallSpeed);
+            } else if (player.getVelocityY() < currentMinJumpSpeed) {
+                player.setVelocityY(currentMinJumpSpeed);
+            }
         }
     }
 
@@ -244,6 +255,10 @@ public class GameEngine implements Runnable {
     private void updateGameLogic() {
 
 
+        boolean isPlatformer = mainWindow.getPlayerPanel().getWorld().isPlatformer();
+        player.setPlatformer(isPlatformer);
+
+
         if (player.isPlatformer() && getCurrentGameMode() == GameMode.WAVE) {
             pauseGamewave("Tryb platformera i Wave nie mogą być aktywne jednocześnie!");
             return; // Zatrzymaj dalsze wykonywanie updateGameLogic()
@@ -256,11 +271,22 @@ public class GameEngine implements Runnable {
         double playerY = player.getY();
         int cameraOffsetX = mainWindow.getPlayerPanel().getCameraOffsetX();
 
+        if (mainWindow.isAnimatingDeath() && mainWindow.fragmentAnimation != null) {
+            mainWindow.fragmentAnimation.update();
+            return;
+        }
+
+
+
         // Tryb platformer jest niezależny od trybu gry
 
         if (!player.isPlatformer()) {
             double newX = player.getX() + player.getPlayerSpeed();
-            if (!mainWindow.getPlayerPanel().isCollision( newX,  player.getY())) {
+            // Sprawdzenie kolizji z kafelkami w trybie non-platformer i śmierć
+            if (mainWindow.getPlayerPanel().isCollision( newX,  player.getY())) {
+                mainWindow.die(player, mainWindow);
+                return; // Zatrzymaj dalsze wykonywanie updateGameLogic() po śmierci
+            } else {
                 player.setX(newX);
             }
         }
@@ -325,14 +351,14 @@ public class GameEngine implements Runnable {
             if (player.isPlatformer()) {
                 // Platformer i Ball - obracanie kontrolowane klawiszami
                 if (mainWindow.getPressedKeys().contains(KeyEvent.VK_A)) {
-                    player.setRotationAngle((player.getRotationAngle() + (player.isGravityReversed() ? 5 : -5)) % 360);
+                    player.setRotationAngle((player.getRotationAngle() + (-5)) % 360);
 
                 } else if (mainWindow.getPressedKeys().contains(KeyEvent.VK_D)) {
-                    player.setRotationAngle((player.getRotationAngle() + (player.isGravityReversed() ? -5 : 5)) % 360);
+                    player.setRotationAngle((player.getRotationAngle() + (5)) % 360);
                 }
             } else {
-                // Ball (poza platformerem) - automatyczny obrót
-                player.setRotationAngle((player.getRotationAngle() + (player.isGravityReversed() ? -3 : 3)) % 360);
+                // Ball (poza platformerem) - automatyczny obrótaaaa
+                player.setRotationAngle((player.getRotationAngle() + (5)) % 360);
                 System.out.println("Gravity" + player.isGravityReversed() + "rotation" + player.getRotationAngle());
             }
 
@@ -413,7 +439,7 @@ public class GameEngine implements Runnable {
             // Brak obracania w trybie UFO
         } else if (currentGameMode == GameMode.WAVE) {
             // Logika dla trybu WAVE
-            int waveSpeed = 5; // Prędkość poruszania się góra/dół w trybie Wave
+            int waveSpeed = 5;
 
             if (mainWindow.getPressedKeys().contains(KeyEvent.VK_SPACE) || mainWindow.getPressedKeys().contains(KeyEvent.VK_UP)) {
                 // Ruch w górę
@@ -431,27 +457,30 @@ public class GameEngine implements Runnable {
         } else if (currentGameMode == GameMode.SHIP) {
             // Logika dla trybu SHIP
             if (player.getOrbEffectDuration() > 0) {
-                double newY = player.getY() + player.getVelocityY();
-                if (mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
-                    player.setOrbEffectDuration(0);
-                } else {
-                    player.setY(newY);
-                    if (player.getVelocityY() < 7) {
-                        player.setVelocityY(player.getVelocityY() + 1);
-                    } else {
-                        if (mainWindow.getPressedKeys().contains(KeyEvent.VK_SPACE) || mainWindow.getPressedKeys().contains(KeyEvent.VK_UP)) {
-                            if (player.isGravityReversed()) {
-                                player.setVelocityY(Math.min(7, player.getVelocityY() + 1));
-                                player.decrementOrbEffectActiveDuration();
-                            } else {
-                                player.setVelocityY(Math.max(-7, player.getVelocityY() - 1));
-                                player.decrementOrbEffectActiveDuration();
-                            }
-                        }
-                    }
+                player.setOrbEffectDuration(player.getOrbEffectDuration() - 1);
+
+                // Stopniowo zbliżaj prędkość do docelowej
+                if (player.getVelocityY() > player.getTargetOrbVelocity()) {
+                    player.setVelocityY(Math.max(player.getTargetOrbVelocity(), player.getVelocityY() - (player.isGravityReversed() ? 1.0 : 2.0)));
+                } else if (player.getVelocityY() < player.getTargetOrbVelocity()) {
+                    player.setVelocityY(Math.min(player.getTargetOrbVelocity(), player.getVelocityY() + (player.isGravityReversed() ? 2.0 : 0.5)));
                 }
+
+                // Zastosuj nową prędkość
+                double newY = player.getY() + player.getVelocityY();
+                if (!mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
+                    player.setY(newY);
+                } else {
+                    // Jeśli jest kolizja, wyłącz efekt orba
+                    player.setOrbEffectDuration(0);
+                    player.setOrbEffectActive(false);
+                }
+
                 player.decrementOrbEffectActiveDuration();
-            } else if (mainWindow.getPressedKeys().contains(KeyEvent.VK_SPACE) || mainWindow.getPressedKeys().contains(KeyEvent.VK_UP)) {
+                if (player.getOrbEffectDuration() <= 0) {
+                    player.setOrbEffectActive(false);
+                }
+            }  else if (mainWindow.getPressedKeys().contains(KeyEvent.VK_SPACE) || mainWindow.getPressedKeys().contains(KeyEvent.VK_UP)) {
                 if (player.isGravityReversed()) {
                     player.setVelocityY(Math.min(7, player.getVelocityY() + 1));
                 } else {
@@ -759,6 +788,15 @@ public class GameEngine implements Runnable {
         }
 
         return collision;
+    }
+
+    private String getOrbColorActivated(Player player) {
+        for (Orb orb : mainWindow.getPlayerPanel().getWorld().getOrbs()) {
+            if (Math.abs(player.getX() - orb.getX() * 50) < 50 && Math.abs(player.getY() - orb.getY() * 50) < 50) {
+                return orb.getColor();
+            }
+        }
+        return null; // Żaden orb nie jest aktywowany
     }
 
     private void teleportToNearestSurface(Player player, World world) {

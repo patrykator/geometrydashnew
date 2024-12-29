@@ -13,6 +13,15 @@ public class LevelData {
     private List<Pad> pads = new ArrayList<>();
     private List<Portal> portals = new ArrayList<>();
     private List<SpeedPortal> speedPortals = new ArrayList<>();
+    private boolean isPlatformer;
+
+    public boolean isPlatformer() {
+        return isPlatformer;
+    }
+
+    public void setPlatformer(boolean platformer) {
+        isPlatformer = platformer;
+    }
 
 
     public List<Tile> getTiles() {

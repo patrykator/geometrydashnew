@@ -28,7 +28,7 @@ public class Main {
 
             // Utworzenie GameEngine
             GameEngine gameEngine = new GameEngine(mainWindow, player);
-            gameEngine.setCurrentGameMode(GameMode.SHIP);
+            gameEngine.setCurrentGameMode(GameMode.CUBE);
             mainWindow.setGameEngine(gameEngine);
 
             // Ustawienie GameEngine w MainWindow

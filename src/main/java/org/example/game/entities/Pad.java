@@ -65,23 +65,53 @@ public class Pad {
 
 
     public void activate(Player player) {
+        boolean isShip = player.isShipMode();
+
         switch (color) {
             case "yellow" -> {
-                player.setVelocityY(player.isGravityReversed() ? 16 : -16);
-                player.setJumping(true);
+                if (isShip) {
+                    player.setVelocityY(player.isGravityReversed() ? 13 : -13);
+                    player.setOrbEffectActive(true);
+                    player.setOrbEffectDuration(10);
+                } else {
+                    player.setVelocityY(player.isGravityReversed() ? 16 : -16);
+                    player.setJumping(true);
+                }
             }
             case "purple" -> {
-                player.setVelocityY(player.isGravityReversed() ? 10 : -10);
-                player.setJumping(true);
+                if (isShip) {
+                    player.setVelocityY(player.isGravityReversed() ? 10 : -10);
+                    player.setOrbEffectActive(true);
+                    player.setOrbEffectDuration(3);
+                } else {
+                    player.setVelocityY(player.isGravityReversed() ? 10 : -10);
+                    player.setJumping(true);
+                }
             }
             case "red" -> {
-                player.setOrbEffectDuration(4);
-                player.setVelocityY(player.isGravityReversed() ? 20 : -20);
-                player.setJumping(true);
+                if (isShip) {
+                    // Zmiana: Nadaj prędkość w górę, nie teleportuj
+                    player.setVelocityY(player.isGravityReversed() ? 16 : -16);
+                    player.setRedOrbVelocity(player.getVelocityY());
+                    player.setOrbEffectDuration(15);
+                    player.setOrbEffectActive(true);
+                    System.out.println("Czerwony orb, velocityY: " + player.getVelocityY());
+                    player.setJumping(true);
+                } else {
+                    player.setVelocityY(player.isGravityReversed() ? 20 : -20);
+                    player.setOrbEffectDuration(4);
+                    System.out.println("Czerwony orb, velocityY: " + player.getVelocityY());
+                    player.setJumping(true);
+                }
             }
             case "blue" -> {
-                player.setGravityReversed(!player.isGravityReversed());
-                player.setVelocityY(player.isGravityReversed() ? -16 : 16);
+                if (isShip) {
+                    player.setGravityReversed(!player.isGravityReversed());
+                    player.setVelocityY(player.isGravityReversed() ? -7 : 7);
+                } else {
+                    player.setGravityReversed(!player.isGravityReversed());
+                    player.setVelocityY(player.isGravityReversed() ? -16 : 16);
+                }
             }
             case "spider" -> {
                 if ("up".equals(direction)) {

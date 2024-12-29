@@ -222,6 +222,8 @@ public class EditLevelMenu extends JFrame {
 
     private void createLevel() {
         World world = new World();
+        world.setPlatformer(false);
+
         mainWindow.getPlayerPanel().setWorld(world);
         mainWindow.respawnPlayerIfNeeded(mainWindow.getPlayerPanel().getPlayer());
         mainWindow.getPlayerPanel().setVisible(true);
@@ -242,6 +244,9 @@ public class EditLevelMenu extends JFrame {
             LevelData levelData = objectMapper.readValue(levelFile, LevelData.class);
             World world = new World();
             world.loadLevelData(levelData);
+
+            mainWindow.getPlayerPanel().setPlatformer(world.isPlatformer());
+
             mainWindow.getPlayerPanel().setWorld(world);
             mainWindow.respawnPlayerIfNeeded(mainWindow.getPlayerPanel().getPlayer());
             mainWindow.getPlayerPanel().setVisible(true);
@@ -249,6 +254,8 @@ public class EditLevelMenu extends JFrame {
             mainWindow.getInputHandler().setEditingMode(true);
 
             mainWindow.addToolSelectionPanel(); // Dodaj ToolSelectionPanel
+
+            mainWindow.getToolSelectionPanel().setPlatformerCheckboxState(world.isPlatformer());
 
             mainWindow.startGame(levelFile);
         } catch (IOException e) {

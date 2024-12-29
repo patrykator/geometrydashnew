@@ -40,12 +40,6 @@ public class PlayerPanel extends JPanel {
     private int mouseX, mouseY;
     private GameMode portalGameMode = null;
     private final Map<GameMode, Image> portalImages = new HashMap<>();
-    private Image slowSpeedPortalImage;
-    private Image normalSpeedPortalImage;
-    private Image fastSpeedPortalImage;
-    private Image veryFastSpeedPortalImage;
-    private Image extremelyFastSpeedPortalImage;
-    private Image selectedSpeedPortalImage;
     private double portalSpeedMultiplier = 1.0;
     private boolean isDimmed = false;
     private InputHandler inputHandler;
@@ -53,6 +47,8 @@ public class PlayerPanel extends JPanel {
     private String selectedPadColor = "yellow";
     private boolean showHitboxes = false;
     private boolean isFlipped = false;
+    private boolean isPlatformer;
+    private String selectedOrbDirection = "up";
 
     public PlayerPanel(Player player, World world, MainWindow mainWindow) {
         this.player = player;
@@ -109,26 +105,35 @@ public class PlayerPanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (mainWindow.getGameEngine().isRunning()) {
+                // Zmodyfikowany warunek - teraz dopuszcza tryb edycji
+                if (mainWindow.getGameEngine().isRunning() && !inputHandler.isEditingMode()) {
                     return;
                 }
                 int gridX = (e.getX() + cameraOffsetX) / 50;
                 int gridY = (e.getY() + cameraOffsetY) / 50;
+                System.out.println("Selected tool: " + selectedTool);
 
-                if (selectedTool == 1) { // Tile
-                    placeTile(gridX, gridY);
-                } else if (selectedTool == 2) {
-                    placeSpike(gridX, gridY);
-                } else if (selectedTool == 3) {
-                    placeOrb(gridX, gridY, "red");
-                } else if (selectedTool == 4) {
-                    placePad(gridX, gridY, "red", "top");
-                }  else if (selectedTool == 9) {
-                    placePortal(gridX, gridY, portalGameMode);
-                } else if (selectedTool == 10) {
-                    placeSpeedPortal(gridX, gridY, portalSpeedMultiplier);
+                if (inputHandler.isEditingMode()) {
+
+                    if (selectedTool == 1) { // Tile
+                        placeTile(gridX, gridY);
+                    } else if (selectedTool == 2) {
+                        placeSpike(gridX, gridY);
+                    } else if (selectedTool == 3) {
+                        placeOrb(gridX, gridY, "red");
+                    } else if (selectedTool == 4) {
+                        placePad(gridX, gridY, "red", "top");
+                    } else if (selectedTool == 9) {
+                        placePortal(gridX, gridY, portalGameMode);
+                    } else if (selectedTool == 10) {
+                        placeSpeedPortal(gridX, gridY, portalSpeedMultiplier);
+                    } else if (selectedTool == 11) { // Delete
+                        deleteObject(gridX, gridY);
+                    }
                 }
             }
+
+
 
 
             @Override
@@ -145,9 +150,103 @@ public class PlayerPanel extends JPanel {
         });
     }
 
+    private void deleteObject(int gridX, int gridY) {
+
+        System.out.println("Deleting object at gridX: " + gridX + ", gridY: " + gridY);
+        // Usuwanie kafelka
+        Tile tileToRemove = null;
+        for (Tile tile : world.getTiles()) {
+            if (tile.getX() == gridX && tile.getY() == gridY) {
+                tileToRemove = tile;
+                break;
+            }
+        }
+        if (tileToRemove != null) {
+            world.getTiles().remove(tileToRemove);
+        }
+
+        // Usuwanie kolca
+        Spike spikeToRemove = null;
+        for (Spike spike : world.getSpikes()) {
+            if (spike.getX() == gridX && spike.getY() == gridY) {
+                spikeToRemove = spike;
+                break;
+            }
+        }
+        if (spikeToRemove != null) {
+            world.getSpikes().remove(spikeToRemove);
+        }
+
+        // Usuwanie orba
+        Orb orbToRemove = null;
+        for (Orb orb : world.getOrbs()) {
+            if (orb.getX() == gridX && orb.getY() == gridY) {
+                orbToRemove = orb;
+                break;
+            }
+        }
+        if (orbToRemove != null) {
+            world.getOrbs().remove(orbToRemove);
+        }
+
+        // Usuwanie pada
+        Pad padToRemove = null;
+        for (Pad pad : World.getPads()) {
+            if (pad.getX() == gridX && pad.getY() == gridY) {
+                padToRemove = pad;
+                break;
+            }
+        }
+        if (padToRemove != null) {
+            World.getPads().remove(padToRemove);
+        }
+
+        // Usuwanie portalu
+        Portal portalToRemove = null;
+        for (Portal portal : world.getPortals()) {
+            if (portal.getX() == gridX && portal.getY() == gridY) {
+                portalToRemove = portal;
+                break;
+            }
+        }
+        if (portalToRemove != null) {
+            world.getPortals().remove(portalToRemove);
+        }
+
+        // Usuwanie portalu predkosci
+        SpeedPortal speedPortalToRemove = null;
+        for (SpeedPortal speedPortal : world.getSpeedPortals()) {
+            if (speedPortal.getX() == gridX && speedPortal.getY() == gridY) {
+                speedPortalToRemove = speedPortal;
+                break;
+            }
+        }
+        if (speedPortalToRemove != null) {
+            world.getSpeedPortals().remove(speedPortalToRemove);
+        }
+
+        repaint();
+    }
+
     public void setDimmed(boolean dimmed) {
         isDimmed = dimmed;
         repaint();
+    }
+
+    public boolean isPlatformer() {
+        return isPlatformer;
+    }
+
+    public void setPlatformer(boolean platformer) {
+        this.isPlatformer = platformer;
+        if (world != null) {
+            world.setPlatformer(platformer);
+        }
+    }
+
+
+    public void setSelectedOrbDirection(String selectedOrbDirection) {
+        this.selectedOrbDirection = selectedOrbDirection;
     }
 
     public void setInputHandler(InputHandler inputHandler) {
@@ -240,6 +339,8 @@ public class PlayerPanel extends JPanel {
                     placePortal(gridX, gridY, portalGameMode);
                 } else if (selectedTool == 10) {
                     placeSpeedPortal(gridX, gridY, portalSpeedMultiplier);
+                } else if (selectedTool == 11) { // Delete
+                    deleteObject(gridX, gridY);
                 }
             }
         });
@@ -273,6 +374,7 @@ public class PlayerPanel extends JPanel {
 
     public void setWorld(World world) {
         this.world = world;
+        this.isPlatformer = world.isPlatformer();
         repaint(); // Zaktualizuj grafikę po zmianie świata
     }
 
@@ -352,6 +454,36 @@ public class PlayerPanel extends JPanel {
 
         loadEntityImages("Orb", orbImages, "Yellow", "Purple", "Red", "Blue", "Green", "Black", "Spider_Up", "Spider_Down", "Teleport");
         loadEntityImages("Pad", padImages, "Yellow", "Purple", "Red", "Blue", "Spider");
+    }
+
+
+
+    public Image getPlayerImage() {
+        return playerImage;
+    }
+
+    public Image getShipImage() {
+        return shipImage;
+    }
+
+    public Image getBallModeImage() {
+        return ballModeImage;
+    }
+
+    public Image getUfoImage() {
+        return ufoImage;
+    }
+
+    public Image getWaveImage() {
+        return waveImage;
+    }
+
+    public Image getRobotImage() {
+        return robotImage;
+    }
+
+    public Image getSpiderImage() {
+        return spiderImage;
     }
 
     private void loadEntityImages(String type, Map<String, Image> imageMap, String... keys) {
@@ -436,7 +568,11 @@ public class PlayerPanel extends JPanel {
                 return;
             }
         }
-        world.addOrb(new Orb(adjustedGridX, gridY, selectedOrbColor));
+        if ("spider".equals(selectedOrbColor)) {
+            world.addOrb(new Orb(adjustedGridX, gridY, selectedOrbColor, selectedOrbDirection));
+        } else {
+            world.addOrb(new Orb(adjustedGridX, gridY, selectedOrbColor));
+        }
         repaint();
     }
 
@@ -483,6 +619,7 @@ public class PlayerPanel extends JPanel {
     }
 
     private void placeSpeedPortal(int gridX, int gridY, double speedMultiplier) {
+        System.out.println("placeSpeedPortal() called");
         if (mainWindow.getGameEngine().isGamePaused()) {
             return;
         }
@@ -519,8 +656,16 @@ public class PlayerPanel extends JPanel {
             drawGrid(g2d);
         }
 
-        // Rysowanie świata i gracza
-        drawWorldAndPlayer(g2d);
+        if (!mainWindow.isAnimatingDeath()) {
+            drawPlayer(g2d);
+        }
+
+        drawWorld(g2d);
+
+        if (mainWindow.isAnimatingDeath() && mainWindow.fragmentAnimation != null) {
+            mainWindow.fragmentAnimation.draw(g2d);
+        }
+
         g2d.dispose();
 
         // Przyciemnienie ekranu, jeśli gra jest zapauzowana
@@ -541,6 +686,7 @@ public class PlayerPanel extends JPanel {
             case 4 -> "Pad";
             case 9 -> "Portal";
             case 10 -> "Speed Portal";
+            case 11 -> "Delete";
             default -> "Unknown";
         };
     }
@@ -927,14 +1073,7 @@ public class PlayerPanel extends JPanel {
         repaint();
     }
 
-    public boolean isShowHitboxes() {
-        return showHitboxes;
-    }
 
-    public void toggleShowHitboxes() {
-        this.showHitboxes = !this.showHitboxes;
-        repaint();
-    }
 
     public void setPortalSpeedMultiplier(double speedMultiplier) {
         this.portalSpeedMultiplier = speedMultiplier;

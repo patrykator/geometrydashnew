@@ -19,6 +19,9 @@ public class Player extends Entity {
     private double velocityY;
     private double playerSpeed = 5.0; // Zmień na double
     private final double defaultPlayerSpeed = 5.0;
+    private double redOrbVelocity = 0;
+    private double targetOrbVelocity;
+    private double orbVelocityChangeRate = 0.0;
 
 
     private static int staticX;// Dodaj zmienną isPlatformer
@@ -32,25 +35,30 @@ public class Player extends Entity {
 
     private GameMode currentGameMode = GameMode.CUBE;
 
+    public double getTargetOrbVelocity() {
+        return targetOrbVelocity;
+    }
+
+    public void setTargetOrbVelocity(double targetOrbVelocity) {
+        this.targetOrbVelocity = targetOrbVelocity;
+    }
+
+    public double getOrbVelocityChangeRate() {
+        return orbVelocityChangeRate;
+    }
+
     public synchronized void setCurrentGameMode(GameMode gameMode) {
         this.currentGameMode = gameMode;
     }
 
-    public void startJump() {
-        jumpStartTime = System.currentTimeMillis();
+    public double getRedOrbVelocity() {
+        return redOrbVelocity;
     }
 
-    public long getJumpHoldTime() {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime < jumpStartTime) {
-            return 0; // Jeśli z jakiegoś powodu currentTime jest mniejsze niż jumpStartTime, zwróć 0
-        }
-        return currentTime - jumpStartTime;
+    public void setRedOrbVelocity(double redOrbVelocity) {
+        this.redOrbVelocity = redOrbVelocity;
     }
 
-    public long getMaxJumpHoldTime() {
-        return maxJumpHoldTime;
-    }
 
     public synchronized GameMode getCurrentGameMode() { // metoda do pobierania trybu gracza
         return this.currentGameMode;
