@@ -96,6 +96,7 @@ public class Orb {
 
     public void activate(Player player) {
         boolean isShip = player.isShipMode();
+        boolean isUfo = player.isUfoMode();
         boolean isBall = player.isBallMode();
 
         switch (color) {
@@ -105,6 +106,10 @@ public class Orb {
                     player.setVelocityY(player.isGravityReversed() ? 13 : -13);
                     player.setOrbEffectActive(true);
                     player.setOrbEffectDuration(10);
+                } else if (isUfo) {
+                    player.setVelocityY(player.isGravityReversed() ? 15 : -15);
+                    player.setOrbEffectActive(true);
+                    player.setOrbEffectDuration(6);
                 } else {
                     player.setVelocityY(player.isGravityReversed() ? 16 : -16);
                 }
@@ -113,6 +118,10 @@ public class Orb {
                 if (isShip) {
                     // Zmiana: Nadaj prędkość w górę, nie teleportuj
                     player.setVelocityY(player.isGravityReversed() ? 10 : -10);
+                    player.setOrbEffectActive(true);
+                    player.setOrbEffectDuration(10);
+                } else if (isUfo) {
+                    player.setVelocityY(player.isGravityReversed() ? 12 : -12);
                     player.setOrbEffectActive(true);
                     player.setOrbEffectDuration(3);
                 } else {
@@ -125,6 +134,13 @@ public class Orb {
                     player.setVelocityY(player.isGravityReversed() ? 16 : -16);
                     player.setRedOrbVelocity(player.getVelocityY());
                     player.setOrbEffectDuration(15);
+                    player.setOrbEffectActive(true);
+                    System.out.println("Czerwony orb, velocityY: " + player.getVelocityY());
+                    player.setJumping(true);
+                } else if (isUfo) {
+                    player.setVelocityY(player.isGravityReversed() ? 18 : -18);
+                    player.setRedOrbVelocity(player.getVelocityY());
+                    player.setOrbEffectDuration(9);
                     player.setOrbEffectActive(true);
                     System.out.println("Czerwony orb, velocityY: " + player.getVelocityY());
                     player.setJumping(true);
@@ -151,12 +167,16 @@ public class Orb {
                     player.setOrbEffectActive(true);
                     player.setOrbEffectDuration(4);
                     player.setGravityReversed(!player.isGravityReversed());
+                } else if (isUfo) {
+                    player.setVelocityY(player.isGravityReversed() ? 12 : -12);
+                    player.setOrbEffectActive(true);
+                    player.setOrbEffectDuration(4);
+                    player.setGravityReversed(!player.isGravityReversed());
                 } else {
                     player.setJumping(true);
                     player.setGravityReversed(!player.isGravityReversed());
                 }
                 player.setVelocityY(player.isGravityReversed() ? 16 : -16);
-
             }
             case "black" -> {
                 if (isShip) {
@@ -167,6 +187,13 @@ public class Orb {
                 } else if (isBall) {
                     player.setVelocityY(player.isGravityReversed() ? 16 : -16);
                     player.setGravityReversed(!player.isGravityReversed());
+                } else if (isUfo) {
+                    // Zmiana dla UFO: Ustaw docelową prędkość, a nie sztywną wartość
+                    player.setOrbEffectDuration(100);
+                    player.setOrbEffectActive(true);
+                    player.setTargetOrbVelocity(player.isGravityReversed() ? -18 : 18);
+
+                    player.setVelocityY(player.isGravityReversed() ? -18 : 18);
                 } else {
                     player.setVelocityY(player.isGravityReversed() ? -16 : 16);
                 }
@@ -179,6 +206,10 @@ public class Orb {
                 }
                 player.setTeleport(true);
                 player.setSpiderOrbActivated(true);
+                player.setSpiderOrbJustActivated(true); // Ustaw flagę w Player
+                player.setJumping(false); // To może być zbędne, jeśli flaga działa
+                // poprawnie
+                player.setInputBlockedAfterSpiderOrb(true);
             }
             case "teleport" -> {
                 if (teleportX != null && teleportY != null) {

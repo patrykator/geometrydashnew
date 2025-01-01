@@ -22,6 +22,15 @@ public class Player extends Entity {
     private double redOrbVelocity = 0;
     private double targetOrbVelocity;
     private double orbVelocityChangeRate = 0.0;
+    private boolean spiderOrbJustActivated;
+    private boolean inputBlockedAfterSpiderOrb;
+    public boolean isInputBlockedAfterSpiderOrb() {
+        return inputBlockedAfterSpiderOrb;
+    }
+
+    public void setInputBlockedAfterSpiderOrb(boolean inputBlockedAfterSpiderOrb) {
+        this.inputBlockedAfterSpiderOrb = inputBlockedAfterSpiderOrb;
+    }
 
 
     private static int staticX;// Dodaj zmienną isPlatformer
@@ -45,6 +54,14 @@ public class Player extends Entity {
 
     public double getOrbVelocityChangeRate() {
         return orbVelocityChangeRate;
+    }
+
+    public boolean isSpiderOrbJustActivated() {
+        return spiderOrbJustActivated;
+    }
+
+    public void setSpiderOrbJustActivated(boolean spiderOrbJustActivated) {
+        this.spiderOrbJustActivated = spiderOrbJustActivated;
     }
 
     public synchronized void setCurrentGameMode(GameMode gameMode) {
@@ -259,4 +276,13 @@ public class Player extends Entity {
         return velocityY;
     }
 
+    public boolean isUfoMode() {
+        return currentGameMode == GameMode.UFO;
+    }
+
+    public void decrementOrbEffectDuration() {
+        if (orbEffectDuration > 0) {
+            orbEffectDuration--;
+        }
+    }
 }

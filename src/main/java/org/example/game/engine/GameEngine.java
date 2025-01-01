@@ -174,6 +174,7 @@ public class GameEngine implements Runnable {
         player.setJumping(false);
         player.setRotationAngle(0); // Zresetuj kąt obrotu
         player.setGravityReversed(false);
+        player.setSpiderOrbJustActivated(false);
 
 
         player.setOrbEffectDuration(0);
@@ -219,24 +220,67 @@ public class GameEngine implements Runnable {
         double currentMinJumpSpeed;
         double maxFallSpeed;
 
-        if (player.getOrbEffectDuration() > 0) {
-            currentMinJumpSpeed = -20;
-            maxFallSpeed = player.isGravityReversed() ? 16 : -16;
-            player.setOrbEffectDuration(player.getOrbEffectDuration() - 1);
-        } else {
-            currentMinJumpSpeed = player.getOriginalMinJumpSpeed();
-            maxFallSpeed = 16;
-        }
+        if (player.isUfoMode()) {
+            if (player.getOrbEffectDuration() > 0) {
+                // Podczas trwania efektu orba w UFO, użyj docelowej prędkości jako ograniczeń
+                maxFallSpeed = player.getTargetOrbVelocity();
+                currentMinJumpSpeed = player.getTargetOrbVelocity();
+            } else {
+                // Poza efektem orba, użyj standardowych wartości dla UFO
+                currentMinJumpSpeed = player.getOriginalMinJumpSpeed();
+                maxFallSpeed = 16;
+            }
 
-        // TYMCZASOWO wyłącz ograniczenie prędkości, jeśli orb jest aktywny
-        if (player.isOrbEffectActive() && (player.getCurrentGameMode() == GameMode.SHIP)) {
-            return;
+            if (mainWindow.getPlayerPanel().isCollision(player.getX(), player.getY() + player.getVelocityY())) {
+                player.setOrbEffectDuration(0);
+                player.setOrbEffectActive(false);
+            }
+
+            // Ogranicz prędkość tylko jeśli nie zbliżamy się do docelowej
+            if (!isApproachingTargetVelocity(player.getVelocityY(), player.getTargetOrbVelocity())) {
+                if (player.getVelocityY() > maxFallSpeed) {
+                    player.setVelocityY(maxFallSpeed);
+                } else if (player.getVelocityY() < currentMinJumpSpeed) {
+                    player.setVelocityY(currentMinJumpSpeed);
+                }
+            }
         } else {
+            // Logika dla trybów innych niż UFO - bez zmian
+            if (player.getOrbEffectDuration() > 0) {
+                currentMinJumpSpeed = -20;
+                maxFallSpeed = player.isGravityReversed() ? 16 : -16;
+            } else {
+                currentMinJumpSpeed = player.getOriginalMinJumpSpeed();
+                maxFallSpeed = 16;
+            }
+
+            // Ogranicz prędkość
             if (player.getVelocityY() > maxFallSpeed) {
                 player.setVelocityY(maxFallSpeed);
             } else if (player.getVelocityY() < currentMinJumpSpeed) {
                 player.setVelocityY(currentMinJumpSpeed);
             }
+        }
+
+
+        if (player.getOrbEffectDuration() > 0) {
+            player.setOrbEffectDuration(player.getOrbEffectDuration() - 1);
+        }
+
+        System.out.println("maxFallSpeed" + maxFallSpeed);
+
+        // Wyłącz ograniczenie prędkości, jeśli orb jest aktywny w trybie SHIP
+        if (player.isOrbEffectActive() && (player.getCurrentGameMode() == GameMode.SHIP)) {
+            return;
+        }
+    }
+
+    // Pomocnicza funkcja do sprawdzania, czy zbliżamy się do docelowej prędkości
+    private boolean isApproachingTargetVelocity(double currentVelocity, double targetVelocity) {
+        if (targetVelocity > 0) {
+            return currentVelocity < targetVelocity;
+        } else {
+            return currentVelocity > targetVelocity;
         }
     }
 
@@ -253,6 +297,15 @@ public class GameEngine implements Runnable {
 
     // In src/main/java/org/example/game/engine/GameEngine.java
     private void updateGameLogic() {
+
+        if (player.isSpiderOrbJustActivated()) {
+            mainWindow.getPressedKeys().remove(KeyEvent.VK_SPACE);
+            mainWindow.getPressedKeys().remove(KeyEvent.VK_UP);
+            player.setSpiderOrbJustActivated(false); // Zresetuj flagę
+            player.setInputBlockedAfterSpiderOrb(true); // Aktywuj flagę blokady inputu
+        }
+
+        System.out.println("Velocity: " + player.getVelocityY());
 
 
         boolean isPlatformer = mainWindow.getPlayerPanel().getWorld().isPlatformer();
@@ -392,9 +445,17 @@ public class GameEngine implements Runnable {
                     player.setJumping(false);
                 }
             }
-        } else if (currentGameMode == GameMode.UFO) {
+        }    else if (currentGameMode == GameMode.UFO) {
             // Logika dla trybu UFO
-            if ((mainWindow.getPressedKeys().contains(KeyEvent.VK_SPACE) || mainWindow.getPressedKeys().contains(KeyEvent.VK_UP)) && !spaceOrUpPressed) {
+            if (player.getOrbEffectDuration() > 0) {
+                // Jeśli efekt orba jest aktywny, stopniowo zbliżaj prędkość do docelowej
+                if (player.getVelocityY() > player.getTargetOrbVelocity()) {
+                    player.setVelocityY(Math.max(player.getTargetOrbVelocity(), player.getVelocityY() - 1));
+                } else if (player.getVelocityY() < player.getTargetOrbVelocity()) {
+                    player.setVelocityY(Math.min(player.getTargetOrbVelocity(), player.getVelocityY() + 1));
+                }
+                // Nie pozwól na dodatkowy skok, gdy efekt orba jest aktywny
+            } else if ((mainWindow.getPressedKeys().contains(KeyEvent.VK_SPACE) || mainWindow.getPressedKeys().contains(KeyEvent.VK_UP)) && !spaceOrUpPressed) {
                 // Skok w trybie UFO (można skakać tylko po pojedynczym naciśnięciu klawisza)
                 double testY = player.getY() + (player.isGravityReversed() ? 1 : -1);
                 if (!mainWindow.getPlayerPanel().isCollision(player.getX(), testY)) {
@@ -414,42 +475,42 @@ public class GameEngine implements Runnable {
             double newY = player.getY() + player.getVelocityY();
             double appliedGravity = player.isGravityReversed() ? -gravity : gravity;
 
-            if (player.isJumping()) {
+            // Zastosuj grawitację tylko, gdy gracz skacze i efekt orba nie jest aktywny
+            if (player.isJumping() && player.getOrbEffectDuration() <= 0) {
                 player.setVelocityY(player.getVelocityY() + appliedGravity);
             }
 
             if (mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
-                // Kolizja w trybie UFO - zatrzymaj ruch w pionie
+                // Kolizja w trybie UFO - zatrzymaj ruch w pionie i zresetuj flagę isJumping()
                 player.setVelocityY(0);
-                player.setJumping(false); // Zatrzymaj skakanie po kolizji
+                player.setJumping(false);
             } else {
                 player.setY(newY);
                 // Jeśli nie ma kolizji, sprawdź czy gracz zaczyna spadać
-                if (!player.isJumping()) {
+                if (!player.isJumping() && player.getOrbEffectDuration() <= 0) {
                     double testY = player.getY() + (player.isGravityReversed() ? -1 : 1);
                     if (!mainWindow.getPlayerPanel().isCollision(player.getX(), testY)) {
                         player.setJumping(true); // Zacznij spadanie jeśli nie ma kolizji pod spodem
                         player.setVelocityY(player.isGravityReversed() ? -gravity : gravity);
                     } else {
-                        player.setVelocityY(0);
-                        player.setJumping(false);
+                        //player.setVelocityY(0);
+                        player.setJumping(false); // Dodano: zresetuj isJumping(), jeśli dotyka podłogi
                     }
                 }
             }
-            // Brak obracania w trybie UFO
-        } else if (currentGameMode == GameMode.WAVE) {
+        }else if (currentGameMode == GameMode.WAVE) {
             // Logika dla trybu WAVE
             int waveSpeed = 5;
 
             if (mainWindow.getPressedKeys().contains(KeyEvent.VK_SPACE) || mainWindow.getPressedKeys().contains(KeyEvent.VK_UP)) {
-                // Ruch w górę
-                double newY = player.getY() - waveSpeed;
+                // Ruch w górę lub w dół w zależności od grawitacji
+                double newY = player.getY() + (player.isGravityReversed() ? waveSpeed : -waveSpeed);
                 if (!mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
                     player.setY(newY);
                 }
             } else {
-                // Ruch w dół
-                double newY = player.getY() + waveSpeed;
+                // Ruch w dół lub w górę w zależności od grawitacji
+                double newY = player.getY() + (player.isGravityReversed() ? -waveSpeed : waveSpeed);
                 if (!mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
                     player.setY(newY);
                 }
@@ -556,25 +617,62 @@ public class GameEngine implements Runnable {
                 }
             } else if (currentGameMode == GameMode.SPIDER) {
                 // Logika dla trybu SPIDER
-                boolean isTouchingGround = mainWindow.getPlayerPanel().isCollisionWithCeilingOrFloor((int)player.getX(), (int)player.getY(), player.isGravityReversed());
+                boolean isTouchingGround = mainWindow.getPlayerPanel().isCollisionWithCeilingOrFloor(player.getX(), player.getY(), player.isGravityReversed());
 
                 if ((mainWindow.getPressedKeys().contains(KeyEvent.VK_SPACE) || mainWindow.getPressedKeys().contains(KeyEvent.VK_UP)) && isTouchingGround) {
-                    if (!spiderTeleportPerformed) { // Sprawdź, czy teleportacja nie została już wykonana
+                    if (!spiderTeleportPerformed) {
+                        // Teleportacja
                         spiderteleport(player, mainWindow.getPlayerPanel().getWorld());
                         player.setGravityReversed(!player.isGravityReversed());
-                        spiderTeleportPerformed = true; // Ustaw flagę na true, aby zablokować kolejne teleportacje
+                        spiderTeleportPerformed = true;
+
+                        // Ustaw prędkość po teleportacji, aby kontynuować ruch
+                        player.setVelocityY(player.isGravityReversed() ? -10 : 10); // Dostosuj prędkość do grawitacji
                     }
                 } else {
-                    // Zresetuj flagę, gdy klawisz jest zwolniony
+                    // Zresetuj flagę, gdy klawisz jest zwolniony lub nie dotyka podłogi/sufitu
                     spiderTeleportPerformed = false;
                 }
 
-                // Obsługa grawitacji (opadanie, jeśli nie jest na ziemi)
-                if (!isTouchingGround) {
-                    double newY = player.getY() + (player.isGravityReversed() ? -5 : 5);
-                    if (!mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
-                        player.setY(newY);
+                // Zastosuj efekt orba, jeśli jest aktywny
+                if (player.getOrbEffectDuration() > 0) {
+                    if (player.getVelocityY() > player.getTargetOrbVelocity()) {
+                        player.setVelocityY(Math.max(player.getTargetOrbVelocity(), player.getVelocityY() - 0.5));
+                    } else if (player.getVelocityY() < player.getTargetOrbVelocity()) {
+                        player.setVelocityY(Math.min(player.getTargetOrbVelocity(), player.getVelocityY() + 0.5));
                     }
+
+                    // Zmniejsz licznik duration, ale tylko jeśli zbliżamy się do targetVelocity
+                    if (isApproachingTargetVelocity(player.getVelocityY(), player.getTargetOrbVelocity())) {
+                        player.decrementOrbEffectDuration();
+                    }
+                } else {
+                    // Standardowa grawitacja, gdy efekt orba nie jest aktywny
+                    double appliedGravity = player.isGravityReversed() ? -gravity : gravity;
+                    player.setVelocityY(player.getVelocityY() + appliedGravity);
+                }
+
+                // Ogranicz prędkość, ale tylko jeśli nie zbliżamy się do docelowej
+                if (player.getOrbEffectDuration() <= 0 || !isApproachingTargetVelocity(player.getVelocityY(), player.getTargetOrbVelocity())) {
+                    if (player.getVelocityY() > 16) {
+                        player.setVelocityY(16);
+                    } else if (player.getVelocityY() < -16) {
+                        player.setVelocityY(-16);
+                    }
+                }
+
+                // Obsługa kolizji
+                double newY = player.getY() + player.getVelocityY();
+                if (mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
+                    player.setVelocityY(0); // Zatrzymaj prędkość przy kolizji
+
+                    // Jeśli kolizja z sufitem/podłogą, zresetuj efekt orba
+                    if (player.getOrbEffectDuration() > 0) {
+                        player.setOrbEffectDuration(0);
+                        player.setOrbEffectActive(false);
+                    }
+                } else {
+                    player.setY(newY);
                 }
             }
 
@@ -829,6 +927,7 @@ public class GameEngine implements Runnable {
         player.setY(nearestY);
         player.setTeleport(false);
         player.setTeleportActivated(true);
+        player.setVelocityY(0);
     }
 
     public boolean isRunning() {

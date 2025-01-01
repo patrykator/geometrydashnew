@@ -66,10 +66,11 @@ public class Pad {
 
     public void activate(Player player) {
         boolean isShip = player.isShipMode();
+        boolean isUfo = player.isUfoMode();
 
         switch (color) {
             case "yellow" -> {
-                if (isShip) {
+                if (isShip || isUfo) {
                     player.setVelocityY(player.isGravityReversed() ? 13 : -13);
                     player.setOrbEffectActive(true);
                     player.setOrbEffectDuration(10);
@@ -79,7 +80,7 @@ public class Pad {
                 }
             }
             case "purple" -> {
-                if (isShip) {
+                if (isShip || isUfo) {
                     player.setVelocityY(player.isGravityReversed() ? 10 : -10);
                     player.setOrbEffectActive(true);
                     player.setOrbEffectDuration(3);
