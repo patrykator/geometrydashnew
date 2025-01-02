@@ -19,6 +19,7 @@ public class InputHandler extends KeyAdapter {
     private boolean spiderOrbKeyPressed = false; // Flaga śledząca trzymanie klawisza spider orba
     private boolean editingMode = false;
     private GameEngine gameEngine;
+    private boolean spaceOrUpPressed = false;
 
     private boolean escPressed = false;
 
@@ -58,6 +59,7 @@ public class InputHandler extends KeyAdapter {
         } else {
             pressedKeys.add(e.getKeyCode());
             if ((e.getKeyCode() == KeyEvent.VK_SPACE || e.getKeyCode() == KeyEvent.VK_UP) && !orbActivated && !teleportActivated) {
+                orbActivated = true;
                 for (Orb orb : playerPanel.getWorld().getOrbs()) {
                     if (Math.abs(player.getX() - orb.getX() * 50) < 50 && Math.abs(player.getY() - orb.getY() * 50) < 50) {
                         System.out.println("Orb activated: " + ", Ship mode: " + player.isShipMode());

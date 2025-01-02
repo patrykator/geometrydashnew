@@ -49,6 +49,7 @@ public class PlayerPanel extends JPanel {
     private boolean isFlipped = false;
     private boolean isPlatformer;
     private String selectedOrbDirection = "up";
+    private String selectedPadPosition = "bottom";
 
     public PlayerPanel(Player player, World world, MainWindow mainWindow) {
         this.player = player;
@@ -122,7 +123,7 @@ public class PlayerPanel extends JPanel {
                     } else if (selectedTool == 3) {
                         placeOrb(gridX, gridY, "red");
                     } else if (selectedTool == 4) {
-                        placePad(gridX, gridY, "red", "top");
+                        placePad(gridX, gridY, selectedPadColor, "top", selectedPadPosition);
                     } else if (selectedTool == 9) {
                         placePortal(gridX, gridY, portalGameMode);
                     } else if (selectedTool == 10) {
@@ -334,7 +335,7 @@ public class PlayerPanel extends JPanel {
                 } else if (selectedTool == 3) {
                     placeOrb(gridX, gridY, "red");
                 } else if (selectedTool == 4) {
-                    placePad(gridX, gridY, "red", "top");
+                    placePad(gridX, gridY, selectedPadColor, "top", selectedPadPosition);
                 }  else if (selectedTool == 9) {
                     placePortal(gridX, gridY, portalGameMode);
                 } else if (selectedTool == 10) {
@@ -576,12 +577,12 @@ public class PlayerPanel extends JPanel {
         repaint();
     }
 
-    private void placePad(int gridX, int gridY, String color, String position) {
+    private void placePad(int gridX, int gridY, String color, String position, String direction) {
         if (mainWindow.getGameEngine().isGamePaused()) {
             return;
         }
 
-        int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
+        int mouseX = this.mouseX;
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
 
         for (Pad pad : world.getPads()) {
@@ -591,7 +592,8 @@ public class PlayerPanel extends JPanel {
                 return;
             }
         }
-        world.addPad(new Pad(adjustedGridX, gridY, selectedPadColor, position));
+        // Używamy nowego konstruktora, uwzględniającego position
+        world.addPad(new Pad(adjustedGridX, gridY, selectedPadColor, selectedPadPosition, direction));
         repaint();
     }
 
@@ -770,16 +772,22 @@ public class PlayerPanel extends JPanel {
                 g2d.fillRect(0, 0, 50, 50);
             }
         } else if (player.getCurrentGameMode() == GameMode.ROBOT) {
-            if (robotImage != null) {
-                if (player.isGravityReversed()) {
-                    g2d.drawImage(robotImage, 0, 50, 50, -50, null);
-                } else {
-                    g2d.drawImage(robotImage, 0, 0, 50, 50, null);
-                }
+
+            if (player.isGravityReversed() && player.isRobotFlipped()) {
+                g2d.drawImage(robotImage, 50, 50, -50, -50, null);
+            } else if (player.isRobotFlipped()) {
+                g2d.drawImage(robotImage, 50, 0, -50, 50, null);
+            } else if (player.isGravityReversed()) {
+                g2d.drawImage(robotImage, 0, 50, 50, -50, null);
+            } else if (robotImage != null) {
+                g2d.drawImage(robotImage, 0, 0, 50, 50, null);
             } else {
                 g2d.setColor(Color.PINK);
                 g2d.fillRect(0, 0, 50, 50);
             }
+
+
+
         } else if (player.getCurrentGameMode() == GameMode.SPIDER) {
             if (spiderImage != null) {
                 if (player.isGravityReversed()) {
@@ -977,7 +985,13 @@ public class PlayerPanel extends JPanel {
 
         Image padImage = padImages.get(padKey);
         if (padImage != null) {
-            g2d.drawImage(padImage, x, y + 30, 50, 20, null);
+            if ("bottom".equals(pad.getPosition())) {
+                // Rysuj pada na górze kratki, jeśli pozycja to "bottom"
+                g2d.drawImage(padImage, x, y + 20, 50, -20, null);
+            } else {
+                // Rysuj pada na dole kratki, jeśli pozycja to "top"
+                g2d.drawImage(padImage, x, y + 30, 50, 20, null);
+            }
         } else {
             g2d.setColor(Color.MAGENTA);
             g2d.fillRect(x + 12, y + 14, 36, 36);
@@ -987,8 +1001,6 @@ public class PlayerPanel extends JPanel {
             g2d.setColor(Color.RED);
             g2d.drawRect(x, y, 50, 50);
         }
-
-
     }
 
     public int getCameraOffsetX() {
@@ -1002,6 +1014,15 @@ public class PlayerPanel extends JPanel {
     public void setCameraOffsetX(int offset) {
         this.cameraOffsetX = offset;
         repaint();
+    }
+
+    public Orb getActivatedOrb(Player player) {
+        for (Orb orb : world.getOrbs()) {
+            if (Math.abs(player.getX() - orb.getX() * 50) < 50 && Math.abs(player.getY() - orb.getY() * 50) < 50) {
+                return orb;
+            }
+        }
+        return null;
     }
 
     public void setCameraOffsetY(int offset) {
@@ -1077,5 +1098,18 @@ public class PlayerPanel extends JPanel {
 
     public void setPortalSpeedMultiplier(double speedMultiplier) {
         this.portalSpeedMultiplier = speedMultiplier;
+    }
+
+    public void setSelectedPadPosition(String selectedPadPosition) {
+        this.selectedPadPosition = selectedPadPosition;
+    }
+
+    public Pad getActivatedPad(Player player) {
+        for (Pad pad : world.getPads()) {
+            if (Math.abs(player.getX() - pad.getX() * 50) < 50 && Math.abs(player.getY() - pad.getY() * 50) < 50) {
+                return pad;
+            }
+        }
+        return null;
     }
 }

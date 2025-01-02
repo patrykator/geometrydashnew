@@ -86,6 +86,7 @@ public class Orb {
         this.teleportY = teleportY;
     }
 
+
     public int getEffectDuration() {
         return effectDuration;
     }
@@ -191,6 +192,7 @@ public class Orb {
                     // Zmiana dla UFO: Ustaw docelową prędkość, a nie sztywną wartość
                     player.setOrbEffectDuration(100);
                     player.setOrbEffectActive(true);
+                    player.setBlackOrbActive(true);
                     player.setTargetOrbVelocity(player.isGravityReversed() ? -18 : 18);
 
                     player.setVelocityY(player.isGravityReversed() ? -18 : 18);
@@ -199,15 +201,16 @@ public class Orb {
                 }
             }
             case "spider" -> {
-                if ("up".equals(direction)) {
-                    player.setGravityReversed(true);
-                } else if ("down".equals(direction)) {
-                    player.setGravityReversed(false);
-                }
+
+
+//                if ("up".equals(direction)) {
+//                    player.setGravityReversed(true);
+//                } else if ("down".equals(direction)) {
+//                    player.setGravityReversed(false);
+//                }
                 player.setTeleport(true);
                 player.setSpiderOrbActivated(true);
-                player.setSpiderOrbJustActivated(true); // Ustaw flagę w Player
-                player.setJumping(false); // To może być zbędne, jeśli flaga działa
+                player.setSpiderOrbJustActivated(true); // Ustaw flagę w Player// To może być zbędne, jeśli flaga działa
                 // poprawnie
                 player.setInputBlockedAfterSpiderOrb(true);
             }

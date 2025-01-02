@@ -32,6 +32,10 @@ public class ToolSelectionPanel extends JPanel {
     private JCheckBox fullscreenCheckBox;
     private JComboBox<String> orbDirectionComboBox;
     private String selectedOrbDirection = "up";
+    private JComboBox<String> padPositionComboBox;
+    private String selectedPadPosition = "top"; // Domyślna pozycja dla pada
+
+    private final String[] padPositions = {"top", "bottom"}; // Zmienione opcje na "top" i "bottom"
 
     private final String[] toolNames = {"None", "Tile", "Spike", "Orb", "Pad", "Portals", "Speed", "Delete"};
     private final String[] portalNames = {"Select", "Cube", "Ship", "Ball", "Ufo", "Wave", "Robot", "Spider"};
@@ -210,6 +214,7 @@ public class ToolSelectionPanel extends JPanel {
             case "Pad":
                 mainWindow.getPlayerPanel().setSelectedTool(4);
                 addPadSelectionComboBox();
+                addPadPositionComboBox();
                 break;
             case "Portals":
                 mainWindow.getPlayerPanel().setSelectedTool(9);
@@ -231,6 +236,31 @@ public class ToolSelectionPanel extends JPanel {
         updateToolLabel();
         revalidate();
         repaint();
+    }
+
+    private void addPadPositionComboBox() {
+        if (padPositionComboBox == null) {
+            padPositionComboBox = createStyledComboBox(padPositions);
+            padPositionComboBox.addItemListener(this::handlePadPositionSelection);
+            padPositionComboBox.setPreferredSize(new Dimension(defaultComboBoxWidth, padPositionComboBox.getPreferredSize().height));
+        }
+        if (!isComponentOnPanel(padPositionComboBox)) {
+            gbc.gridy = 3; // Ustaw pozycję Y dla padPositionComboBox
+            add(padPositionComboBox, gbc);
+            revalidate();
+            repaint();
+        }
+    }
+
+    private void removePadDirectionComboBox() {
+        removeComboBoxSafely(padPositionComboBox);
+    }
+
+    private void handlePadPositionSelection(ItemEvent e) {
+        if (e.getStateChange() == ItemEvent.SELECTED) {
+            selectedPadPosition = (String) padPositionComboBox.getSelectedItem();
+            mainWindow.getPlayerPanel().setSelectedPadPosition(selectedPadPosition); // Ustaw pozycję pada w PlayerPanel
+        }
     }
 
     private void removePortalSelectionComboBox() {

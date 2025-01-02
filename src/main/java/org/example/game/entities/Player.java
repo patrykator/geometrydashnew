@@ -24,6 +24,27 @@ public class Player extends Entity {
     private double orbVelocityChangeRate = 0.0;
     private boolean spiderOrbJustActivated;
     private boolean inputBlockedAfterSpiderOrb;
+    private boolean robotFlipped = false;
+    private boolean blackOrbActive = false;
+    private boolean canJumpAfterCollision = true;
+    private boolean teleportationFailed = false;
+    private boolean teleportPad = false;
+
+
+    public boolean isTeleportationFailed() {
+        return teleportationFailed;
+    }
+
+    public void setTeleportationFailed(boolean teleportationFailed) {
+        this.teleportationFailed = teleportationFailed;
+    }
+
+    public boolean canJumpAfterCollision() {
+        return canJumpAfterCollision;
+    }
+    public void setCanJumpAfterCollision(boolean canJumpAfterCollision) {
+        this.canJumpAfterCollision = canJumpAfterCollision;
+    }
     public boolean isInputBlockedAfterSpiderOrb() {
         return inputBlockedAfterSpiderOrb;
     }
@@ -284,5 +305,29 @@ public class Player extends Entity {
         if (orbEffectDuration > 0) {
             orbEffectDuration--;
         }
+    }
+
+    public boolean isRobotFlipped() {
+        return robotFlipped;
+    }
+
+    public void setRobotFlipped(boolean b) {
+        robotFlipped = b;
+    }
+
+    public boolean isBlackOrbActive() {
+        return blackOrbActive;
+    }
+
+    public void setBlackOrbActive(boolean b) {
+        blackOrbActive = b;
+    }
+
+    public void setTeleportPad(boolean b) {
+        teleportPad = b;
+    }
+
+    public boolean isteleportPad() {
+        return teleportPad;
     }
 }
