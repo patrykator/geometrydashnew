@@ -402,6 +402,26 @@ public class MainWindow extends JFrame {
 //        return world;
 //    }
 
+    // W klasie MainWindow
+    public void instantDie(Player player) {
+        player.setVelocityY(0);
+        player.setX(100);
+        player.setY(playerPanel.getHeight() - 100);
+        player.setRotationAngle(0);
+        player.setGravityReversed(false);
+        playerPanel.setCameraOffsetY(0);
+        playerPanel.setCameraOffsetX(-200);
+        gameEngine.resetGameState();
+        incrementAttempts();
+        isAnimatingDeath = false;
+        player.setCurrentGameMode(GameMode.CUBE);
+        repaint();
+        player.setOrbEffectDuration(0);
+        player.setOrbEffectActive(false);
+
+        playerPanel.resetCameraPosition();
+    }
+
 
     public void showToolSelectionPanel(boolean show) {
         toolSelectionPanel.setVisible(show);
@@ -463,6 +483,7 @@ public class MainWindow extends JFrame {
 
     public void die(Player player, MainWindow mainWindow) {
         if (!isAnimatingDeath) {
+
             isAnimatingDeath = true;
             // Rozpocznij animację rozpadu
             BufferedImage playerImage = null;
@@ -506,6 +527,8 @@ public class MainWindow extends JFrame {
                     return;
                 }
                 SwingUtilities.invokeLater(() -> {
+                    playerPanel.setCameraOffsetY(0);
+                    playerPanel.setCameraOffsetX(-200);
                     gameEngine.resetGameState();
                     incrementAttempts();
                     isAnimatingDeath = false;

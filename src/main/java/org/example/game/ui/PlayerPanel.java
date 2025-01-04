@@ -50,6 +50,9 @@ public class PlayerPanel extends JPanel {
     private boolean isPlatformer;
     private String selectedOrbDirection = "up";
     private String selectedPadPosition = "bottom";
+    private final int MIN_BUILD_Y = -4450;
+    private final int MAX_BUILD_Y = 4450;
+    private final int MIN_BUILD_X = -200;
 
     public PlayerPanel(Player player, World world, MainWindow mainWindow) {
         this.player = player;
@@ -152,6 +155,9 @@ public class PlayerPanel extends JPanel {
     }
 
     private void deleteObject(int gridX, int gridY) {
+        if (!isWithinBuildLimits(gridX * 50, gridY * 50)) {
+            return;
+        }
 
         System.out.println("Deleting object at gridX: " + gridX + ", gridY: " + gridY);
         // Usuwanie kafelka
@@ -506,19 +512,41 @@ public class PlayerPanel extends JPanel {
         }
     }
 
+    private int adjustGridY(int gridY, int mouseY, int cameraOffsetY) {
+        int adjustedY = mouseY + cameraOffsetY;
+        if (adjustedY < 0) {
+            return gridY - 1;
+        } else {
+            return gridY;
+        }
+    }
+
+    private boolean isWithinBuildLimits(int gridX, int gridY) {
+        // Poprawiona logika sprawdzania granic
+        return gridX * 50 >= MIN_BUILD_X + 50 && gridY * 50 >= MIN_BUILD_Y + 50  && gridY * 50 <= MAX_BUILD_Y - 50;
+    }
+
+
 
     private void placeTile(int gridX, int gridY) {
         if (mainWindow.getGameEngine().isGamePaused()) {
             return;
         }
 
+        if (!isWithinBuildLimits(gridX, gridY)) {
+            return;
+        }
+
         int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
+
+        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
         // Reszta logiki bez zmian, używamy adjustedGridX
         Tile existingTile = null;
         for (Tile tile : world.getTiles()) {
-            if (tile.getX() == adjustedGridX && tile.getY() == gridY) {
+            if (tile.getX() == adjustedGridX && tile.getY() == adjustedGridY) {
                 existingTile = tile;
                 break;
             }
@@ -527,7 +555,7 @@ public class PlayerPanel extends JPanel {
         if (existingTile != null) {
             world.getTiles().remove(existingTile);
         } else {
-            world.addTile(new Tile(adjustedGridX, gridY, true));
+            world.addTile(new Tile(adjustedGridX, adjustedGridY, true));
         }
 
         repaint();
@@ -538,18 +566,25 @@ public class PlayerPanel extends JPanel {
             return;
         }
 
+        if (!isWithinBuildLimits(gridX, gridY)) {
+            return;
+        }
+
         int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
 
+        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
+
         if (selectedTool == 2) {
             for (Spike spike : world.getSpikes()) {
-                if (spike.getX() == adjustedGridX && spike.getY() == gridY) {
+                if (spike.getX() == adjustedGridX && spike.getY() == adjustedGridY) {
                     world.getSpikes().remove(spike);
                     repaint();
                     return;
                 }
             }
-            world.addSpike(new Spike(adjustedGridX, gridY));
+            world.addSpike(new Spike(adjustedGridX, adjustedGridY));
             repaint();
         }
     }
@@ -559,11 +594,18 @@ public class PlayerPanel extends JPanel {
             return;
         }
 
+        if (!isWithinBuildLimits(gridX, gridY)) {
+            return;
+        }
+
         int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
 
+        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
+
         for (Orb orb : world.getOrbs()) {
-            if (orb.getX() == adjustedGridX && orb.getY() == gridY) {
+            if (orb.getX() == adjustedGridX && orb.getY() == adjustedGridY) {
                 world.getOrbs().remove(orb);
                 repaint();
                 return;
@@ -572,7 +614,7 @@ public class PlayerPanel extends JPanel {
         if ("spider".equals(selectedOrbColor)) {
             world.addOrb(new Orb(adjustedGridX, gridY, selectedOrbColor, selectedOrbDirection));
         } else {
-            world.addOrb(new Orb(adjustedGridX, gridY, selectedOrbColor));
+            world.addOrb(new Orb(adjustedGridX, adjustedGridY, selectedOrbColor));
         }
         repaint();
     }
@@ -582,18 +624,25 @@ public class PlayerPanel extends JPanel {
             return;
         }
 
-        int mouseX = this.mouseX;
+        if (!isWithinBuildLimits(gridX, gridY)) {
+            return;
+        }
+
+        int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
 
+        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
+
         for (Pad pad : world.getPads()) {
-            if (pad.getX() == adjustedGridX && pad.getY() == gridY) {
+            if (pad.getX() == adjustedGridX && pad.getY() == adjustedGridY) {
                 World.getPads().remove(pad);
                 repaint();
                 return;
             }
         }
         // Używamy nowego konstruktora, uwzględniającego position
-        world.addPad(new Pad(adjustedGridX, gridY, selectedPadColor, selectedPadPosition, direction));
+        world.addPad(new Pad(adjustedGridX, adjustedGridY, selectedPadColor, selectedPadPosition, direction));
         repaint();
     }
 
@@ -602,21 +651,28 @@ public class PlayerPanel extends JPanel {
             return;
         }
 
+        if (!isWithinBuildLimits(gridX, gridY)) {
+            return;
+        }
+
         int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
+
+        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
         if (gameMode == null) {
             System.err.println("Error: portalGameMode is null!");
             return;
         }
         for (Portal portal : world.getPortals()) {
-            if (portal.getX() == adjustedGridX && portal.getY() == gridY) {
+            if (portal.getX() == adjustedGridX && portal.getY() == adjustedGridY) {
                 world.getPortals().remove(portal);
                 repaint();
                 return;
             }
         }
-        world.addPortal(new Portal(adjustedGridX, gridY, gameMode));
+        world.addPortal(new Portal(adjustedGridX, adjustedGridY, gameMode));
         repaint();
     }
 
@@ -626,17 +682,24 @@ public class PlayerPanel extends JPanel {
             return;
         }
 
+        if (!isWithinBuildLimits(gridX, gridY)) {
+            return;
+        }
+
         int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
 
+        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
+
         for (SpeedPortal portal : world.getSpeedPortals()) {
-            if (portal.getX() == adjustedGridX && portal.getY() == gridY) {
+            if (portal.getX() == adjustedGridX && portal.getY() == adjustedGridY) {
                 world.getSpeedPortals().remove(portal);
                 repaint();
                 return;
             }
         }
-        world.addSpeedPortal(new SpeedPortal(adjustedGridX, gridY, speedMultiplier));
+        world.addSpeedPortal(new SpeedPortal(adjustedGridX, adjustedGridY, speedMultiplier));
         repaint();
     }
 
@@ -656,6 +719,7 @@ public class PlayerPanel extends JPanel {
 
         if (mainWindow.getInputHandler().isEditingMode()) {
             drawGrid(g2d);
+            drawBuildLimitLines(g2d);
         }
 
         if (!mainWindow.isAnimatingDeath()) {
@@ -691,6 +755,25 @@ public class PlayerPanel extends JPanel {
             case 11 -> "Delete";
             default -> "Unknown";
         };
+    }
+
+    private void drawBuildLimitLines(Graphics2D g2d) {
+        g2d.setColor(Color.RED);
+        g2d.setStroke(new BasicStroke(2));
+
+        // Skorygowane rysowanie linii
+        int lineX = MIN_BUILD_X;
+        int maxY = Math.max(getHeight(), MAX_BUILD_Y );
+
+        // Pionowa linia
+        g2d.drawLine(lineX, MIN_BUILD_Y, lineX, maxY);
+
+        // Poziome linie
+        g2d.drawLine(lineX, MIN_BUILD_Y, getWidth() + cameraOffsetX, MIN_BUILD_Y);
+        g2d.drawLine(lineX, MAX_BUILD_Y, getWidth() + cameraOffsetX, MAX_BUILD_Y);
+
+
+        System.out.println("lineX: " + lineX + ", maxY: " + maxY);
     }
 
     private void drawAttemptText(Graphics2D g2d) {

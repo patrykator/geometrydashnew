@@ -30,6 +30,7 @@ public class GameEngine implements Runnable {
     private double lastSpeedMultiplier = 1.0;
     private InputHandler inputHandler;
     private Orb currentOrb;
+    private double previousPlayerY;
 
     private boolean gamePaused = false;
     private String pauseReason = "";
@@ -114,23 +115,6 @@ public class GameEngine implements Runnable {
         }
     }
 
-    public void pauseGamewave(String reason) {
-        if (!gamePaused) {
-            gamePaused = true;
-            pauseReason = reason;
-            running = false;
-            // Przyciemnij ekran
-            mainWindow.getPlayerPanel().setDimmed(true);
-
-
-            // Wyświetl komunikat, jeśli nie jest pusty
-            if (!reason.isEmpty()) {
-                JOptionPane.showMessageDialog(mainWindow, reason, "Gra zatrzymana", JOptionPane.WARNING_MESSAGE);
-            }
-
-            mainWindow.repaint();
-        }
-    }
 
     public void resumeGame() {
         if (gamePaused) {
@@ -310,6 +294,7 @@ public class GameEngine implements Runnable {
 
     // In src/main/java/org/example/game/engine/GameEngine.java
     private void updateGameLogic() {
+        previousPlayerY = player.getY();
 
 
 
@@ -334,13 +319,14 @@ public class GameEngine implements Runnable {
 
         GameMode currentGameMode = getCurrentGameMode();
 
-        int panelWidth = mainWindow.getPlayerPanel().getWidth();
-        double playerX = player.getX();
-        double playerY = player.getY();
-        int cameraOffsetX = mainWindow.getPlayerPanel().getCameraOffsetX();
 
         if (mainWindow.isAnimatingDeath() && mainWindow.fragmentAnimation != null) {
             mainWindow.fragmentAnimation.update();
+            return;
+        }
+
+        if (player.getY() > 5000 || player.getY() < -5000) {
+            mainWindow.instantDie(player); // Zmieniamy die() na instantDie()
             return;
         }
 
@@ -416,7 +402,7 @@ public class GameEngine implements Runnable {
 
 
 
-        mainWindow.respawnPlayerIfNeeded(player);
+//        mainWindow.respawnPlayerIfNeeded(player);
 
         // Tryb platformer i statek - obsługa odwracania
         if (player.isPlatformer() && currentGameMode == GameMode.SHIP) {
@@ -818,15 +804,52 @@ public class GameEngine implements Runnable {
         }
 
 
-        Player.setStaticX((int)player.getX());
+        Player.setStaticX((int) player.getX());
+        Player.setStaticY((int) player.getY());
 
+        int panelWidth = mainWindow.getPlayerPanel().getWidth();
+        int panelHeight = mainWindow.getPlayerPanel().getHeight();
         int cameraTargetX = (int) (Player.getStaticX() - (double) panelWidth / 2);
-        double newCameraOffsetX = Math.max(cameraTargetX, -200);
-        mainWindow.getPlayerPanel().setCameraOffsetX((int) newCameraOffsetX);
 
+// Modyfikacja dla cameraOffsetY
+        double cameraTargetY = mainWindow.getPlayerPanel().getCameraOffsetY(); // Inicjalizacja aktualną pozycją kamery
+        double upperThreshold = 0.1; // 10% od góry
+        double lowerThreshold = 0.9; // 10% od dołu
+        int titleBarHeight = 35; // Wysokość paska tytułowego
+
+        if (Player.getStaticY() < panelHeight * upperThreshold - titleBarHeight - 5) {
+            // Gracz w górnych 10% (plus wysokość paska), kamera podąża za graczem do góry
+            if (Player.getStaticY() < 55) {
+                System.out.println("Gracz poza górnym limitem");
+                cameraTargetY = Math.min(0, Player.getStaticY() - 40);
+                System.out.println("cameraTargetY: " + cameraTargetY);
+            } else {
+                cameraTargetY = Math.max(0, Player.getStaticY() - 50); // Poprawiony wzór
+            }
+
+        } else if (Player.getStaticY() > panelHeight * lowerThreshold) {
+            // Gracz w dolnych 10%, kamera podąża za graczem
+            cameraTargetY = (int) (Player.getStaticY() - panelHeight * lowerThreshold);
+        } else {
+            // Gracz w środkowych 80%, kamera pozostaje na tej samej wysokości
+            // Nie zmieniamy cameraTargetY
+        }
+
+        cameraTargetY = Math.max(-4435, Math.min(cameraTargetY, 3500));
+        System.out.println(player.getY());
+
+        double newCameraOffsetX = Math.max(cameraTargetX, -200);
+        double newCameraOffsetY = cameraTargetY;
+
+
+
+        mainWindow.getPlayerPanel().setCameraOffsetX((int) newCameraOffsetX);
+        mainWindow.getPlayerPanel().setCameraOffsetY((int) newCameraOffsetY);
 
 
     }
+
+
 
     public boolean isGamePaused() {
         return gamePaused;

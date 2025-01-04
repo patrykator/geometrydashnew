@@ -29,6 +29,42 @@ public class Player extends Entity {
     private boolean canJumpAfterCollision = true;
     private boolean teleportationFailed = false;
     private boolean teleportPad = false;
+    private static int staticY;
+
+    public static void setStaticY(int y) {
+        Player.staticY = y;
+    }
+
+    public static int getStaticY() {
+        return staticY;
+    }
+
+    public void resetState() {
+        setVelocityY(0);
+        setJumping(false);
+        setRotationAngle(0);
+        resetJumpTime();
+        setTeleport(false);
+        setTeleportActivated(false);
+        setJumpKeyReleased(true);
+        setSpiderOrbActivated(false);
+        setSpiderOrbJustActivated(false);
+        setOrbEffectActive(false);
+        setOrbEffectDuration(0);
+        setOrbEffectActiveDuration(0);
+        setBlackOrbActive(false);
+        setCanJumpAfterCollision(true);
+        setTeleportationFailed(false);
+        setInputBlockedAfterSpiderOrb(false);
+        setPlatformer(false);
+        setShipFlipped(false);
+        setRobotFlipped(false);
+        setTeleportPad(false);
+    }
+
+    private void setOrbEffectActiveDuration(int i) {
+        orbEffectActiveDuration = i;
+    }
 
 
     public boolean isTeleportationFailed() {
@@ -330,4 +366,5 @@ public class Player extends Entity {
     public boolean isteleportPad() {
         return teleportPad;
     }
+
 }
