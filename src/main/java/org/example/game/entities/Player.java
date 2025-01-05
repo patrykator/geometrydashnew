@@ -1,35 +1,37 @@
 package org.example.game.entities;
 
-import java.awt.*;
-
 public class Player extends Entity {
     private boolean isJumping;
     private double rotationAngle;
     private int orbEffectDuration = 0;
-    private int originalMinJumpSpeed = -16;
     private boolean gravityReversed = false;
     private boolean teleport = false;
-    private boolean teleportActivated = false;
-    private boolean jumpKeyReleased = true;
     private boolean spiderOrbActivated = false;
-    private long jumpStartTime = 0;
-    private final long maxJumpHoldTime = 200;
     private double x;
     private double y;
     private double velocityY;
     private double playerSpeed = 5.0; // Zmień na double
-    private final double defaultPlayerSpeed = 5.0;
-    private double redOrbVelocity = 0;
     private double targetOrbVelocity;
-    private double orbVelocityChangeRate = 0.0;
     private boolean spiderOrbJustActivated;
-    private boolean inputBlockedAfterSpiderOrb;
     private boolean robotFlipped = false;
     private boolean blackOrbActive = false;
     private boolean canJumpAfterCollision = true;
-    private boolean teleportationFailed = false;
     private boolean teleportPad = false;
     private static int staticY;
+    private static int staticX;
+    private boolean orbEffectActive = false;
+    private boolean isShipFlipped;
+    private int orbEffectActiveDuration;
+    private boolean isPlatformer = false;
+
+    public Player(String name, int x, int y) {
+        super(name);
+        this.velocityY = 0;
+        this.isJumping = false;
+        this.rotationAngle = 0;
+        this.x = x;
+        this.y = y;
+    }
 
     public static void setStaticY(int y) {
         Player.staticY = y;
@@ -39,65 +41,12 @@ public class Player extends Entity {
         return staticY;
     }
 
-    public void resetState() {
-        setVelocityY(0);
-        setJumping(false);
-        setRotationAngle(0);
-        resetJumpTime();
-        setTeleport(false);
-        setTeleportActivated(false);
-        setJumpKeyReleased(true);
-        setSpiderOrbActivated(false);
-        setSpiderOrbJustActivated(false);
-        setOrbEffectActive(false);
-        setOrbEffectDuration(0);
-        setOrbEffectActiveDuration(0);
-        setBlackOrbActive(false);
-        setCanJumpAfterCollision(true);
-        setTeleportationFailed(false);
-        setInputBlockedAfterSpiderOrb(false);
-        setPlatformer(false);
-        setShipFlipped(false);
-        setRobotFlipped(false);
-        setTeleportPad(false);
-    }
-
-    private void setOrbEffectActiveDuration(int i) {
-        orbEffectActiveDuration = i;
-    }
-
-
-    public boolean isTeleportationFailed() {
-        return teleportationFailed;
-    }
-
-    public void setTeleportationFailed(boolean teleportationFailed) {
-        this.teleportationFailed = teleportationFailed;
-    }
-
     public boolean canJumpAfterCollision() {
         return canJumpAfterCollision;
     }
     public void setCanJumpAfterCollision(boolean canJumpAfterCollision) {
         this.canJumpAfterCollision = canJumpAfterCollision;
     }
-    public boolean isInputBlockedAfterSpiderOrb() {
-        return inputBlockedAfterSpiderOrb;
-    }
-
-    public void setInputBlockedAfterSpiderOrb(boolean inputBlockedAfterSpiderOrb) {
-        this.inputBlockedAfterSpiderOrb = inputBlockedAfterSpiderOrb;
-    }
-
-
-    private static int staticX;// Dodaj zmienną isPlatformer
-    private boolean orbEffectActive = false;
-    private boolean isShipFlipped;
-    private int orbEffectActiveDuration;
-
-    private boolean isPlatformer = false;
-
-    private Image ballModeImage;
 
     private GameMode currentGameMode = GameMode.CUBE;
 
@@ -107,10 +56,6 @@ public class Player extends Entity {
 
     public void setTargetOrbVelocity(double targetOrbVelocity) {
         this.targetOrbVelocity = targetOrbVelocity;
-    }
-
-    public double getOrbVelocityChangeRate() {
-        return orbVelocityChangeRate;
     }
 
     public boolean isSpiderOrbJustActivated() {
@@ -125,21 +70,8 @@ public class Player extends Entity {
         this.currentGameMode = gameMode;
     }
 
-    public double getRedOrbVelocity() {
-        return redOrbVelocity;
-    }
-
-    public void setRedOrbVelocity(double redOrbVelocity) {
-        this.redOrbVelocity = redOrbVelocity;
-    }
-
-
     public synchronized GameMode getCurrentGameMode() { // metoda do pobierania trybu gracza
         return this.currentGameMode;
-    }
-
-    public boolean isCubeMode() {
-        return currentGameMode == GameMode.CUBE;
     }
 
     public boolean isShipMode() {
@@ -150,18 +82,6 @@ public class Player extends Entity {
         return currentGameMode == GameMode.BALL;
     }
 
-
-
-    public Image getBallModeImage() {
-        return ballModeImage;
-    }
-
-    public void setBallModeImage(Image ballModeImage) {
-        this.ballModeImage = ballModeImage;
-    }
-
-
-
     public boolean isShipFlipped() {
         return isShipFlipped;
     }
@@ -169,7 +89,6 @@ public class Player extends Entity {
     public void setShipFlipped(boolean shipFlipped) {
         this.isShipFlipped = shipFlipped;
     }
-
 
     public void decrementOrbEffectActiveDuration() {
         if (orbEffectActiveDuration > 0) {
@@ -185,9 +104,6 @@ public class Player extends Entity {
         orbEffectActive = isActive;
     }
 
-
-
-
     public static double getStaticX() {
         return staticX;
     }
@@ -196,7 +112,6 @@ public class Player extends Entity {
         Player.staticX = staticX;
     }
 
-    // Gettery i settery dla isPlatformer
     public boolean isPlatformer() {
         return isPlatformer;
     }
@@ -205,30 +120,12 @@ public class Player extends Entity {
         this.isPlatformer = isPlatformer;
     }
 
-
-
-
     public boolean isSpiderOrbActivated() {
         return spiderOrbActivated;
     }
 
     public void setSpiderOrbActivated(boolean spiderOrbActivated) {
         this.spiderOrbActivated = spiderOrbActivated;
-    }
-
-
-    public Player(int id, String name, String description, String image, String type, int level, int health, int x, int y) {
-        super(id, name, description, image, type, level, health);
-        this.velocityY = 0;
-        this.isJumping = false;
-        this.rotationAngle = 0;
-        this.jumpStartTime = 0;
-        this.x = x;
-        this.y = y;
-    }
-
-    public void resetJumpTime() {
-        jumpStartTime = 0;
     }
 
     public boolean isGravityReversed() {
@@ -248,10 +145,8 @@ public class Player extends Entity {
     }
 
     public int getOriginalMinJumpSpeed() {
-        return originalMinJumpSpeed;
+        return -16;
     }
-
-
 
     public void setVelocityY(int velocityY) {
         this.velocityY = velocityY;
@@ -278,13 +173,12 @@ public class Player extends Entity {
     }
 
     public double getDefaultPlayerSpeed(){
-        return defaultPlayerSpeed;
+        return 5.0;
     }
 
     public void setPlayerSpeed(double speed) {
         this.playerSpeed = speed;
     }
-
 
     public boolean isTeleport() {
         return teleport;
@@ -292,22 +186,6 @@ public class Player extends Entity {
 
     public void setTeleport(boolean teleport) {
         this.teleport = teleport;
-    }
-
-    public boolean isTeleportActivated() {
-        return teleportActivated;
-    }
-
-    public void setTeleportActivated(boolean teleportActivated) {
-        this.teleportActivated = teleportActivated;
-    }
-
-    public boolean isJumpKeyReleased() {
-        return jumpKeyReleased;
-    }
-
-    public void setJumpKeyReleased(boolean jumpKeyReleased) {
-        this.jumpKeyReleased = jumpKeyReleased;
     }
 
     public double getX() {
@@ -325,6 +203,7 @@ public class Player extends Entity {
     public void setY(double y) {
         this.y = y;
     }
+
     public void setVelocityY(double velocityY) {
         this.velocityY = velocityY;
     }
@@ -363,8 +242,7 @@ public class Player extends Entity {
         teleportPad = b;
     }
 
-    public boolean isteleportPad() {
+    public boolean isTeleportPad() {
         return teleportPad;
     }
-
 }

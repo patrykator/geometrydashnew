@@ -6,12 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class World {
-    private List<Tile> tiles;
-    private List<Spike> spikes;
-    private List<Orb> orbs;
+    private final List<Tile> tiles;
+    private final List<Spike> spikes;
+    private final List<Orb> orbs;
     private static List<Pad> pads;
-    private List<Portal> portals = new ArrayList<>();
-    private List<SpeedPortal> speedPortals = new ArrayList<>();
+    private final List<Portal> portals;
+    private final List<SpeedPortal> speedPortals = new ArrayList<>();
     private boolean isPlatformer;
 
 
@@ -89,7 +89,7 @@ public class World {
         levelData.setTiles(this.tiles);
         levelData.setSpikes(this.spikes);
         levelData.setOrbs(this.orbs);
-        levelData.setPads(this.pads);
+        levelData.setPads(pads);
         levelData.setPortals(this.portals);
         levelData.setSpeedPortals(this.speedPortals);
         levelData.setPlatformer(this.isPlatformer);
@@ -128,19 +128,6 @@ public class World {
             this.speedPortals.addAll(levelData.getSpeedPortals());
         }
 
-        if (levelData != null) {
-            this.isPlatformer = levelData.isPlatformer();
-        }
-    }
-
-
-    public double getOriginalGameHeight() {
-        double maxHeight = 0;
-        for (Tile tile : this.tiles) {
-            if (tile.getY() > maxHeight) {
-                maxHeight = tile.getY();
-            }
-        }
-        return maxHeight;
+        this.isPlatformer = levelData.isPlatformer();
     }
 }

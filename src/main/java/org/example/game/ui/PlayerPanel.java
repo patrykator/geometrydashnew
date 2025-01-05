@@ -1,11 +1,7 @@
 package org.example.game.ui;
 
-//import com.google.gson.Gson;
-//import com.google.gson.GsonBuilder;
-import org.example.game.engine.InputHandler;
 import org.example.game.entities.*;
 import org.example.game.utilities.ImageLoader;
-import org.example.game.world.LevelData;
 import org.example.game.world.Tile;
 import org.example.game.world.World;
 
@@ -34,19 +30,17 @@ public class PlayerPanel extends JPanel {
     private Image spiderImage;
     private int selectedTool = 1;
     private Point dragStartPoint;
-    private static final int INITIAL_WIDTH = 800; // Domyślna szerokość
-    private static final int INITIAL_HEIGHT = 600; // Domyślna wysokość
+    private static final int INITIAL_WIDTH = 800;
+    private static final int INITIAL_HEIGHT = 600;
     private Image spikeImage;
     private int mouseX, mouseY;
     private GameMode portalGameMode = null;
     private final Map<GameMode, Image> portalImages = new HashMap<>();
     private double portalSpeedMultiplier = 1.0;
     private boolean isDimmed = false;
-    private InputHandler inputHandler;
     private String selectedOrbColor = "yellow";
     private String selectedPadColor = "yellow";
     private boolean showHitboxes = false;
-    private boolean isFlipped = false;
     private boolean isPlatformer;
     private String selectedOrbDirection = "up";
     private String selectedPadPosition = "bottom";
@@ -61,106 +55,118 @@ public class PlayerPanel extends JPanel {
         setDoubleBuffered(true);
         loadImages();
         this.setPreferredSize(new Dimension(INITIAL_WIDTH, INITIAL_HEIGHT));
+        setupMouseListeners();
+        setupMouseMotionListeners();
+    }
 
-
-
-
-        addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (mainWindow.getInputHandler().isEditingMode()) {
-                    if (dragStartPoint != null) {
-                        int dx = dragStartPoint.x - e.getX();
-                        int dy = dragStartPoint.y - e.getY();
-
-                        cameraOffsetX += dx;
-                        cameraOffsetY += dy;
-
-                        dragStartPoint = e.getPoint();
-                        repaint();
-                    }
-                }
-            }
-
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                mouseX = e.getX();
-                mouseY = e.getY();
-            }
-        });
-
+    private void setupMouseListeners() {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (mainWindow.getInputHandler().isEditingMode()) {
-                    dragStartPoint = e.getPoint();
-                }
+                handleMousePressed(e);
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (mainWindow.getInputHandler().isEditingMode()) {
-                    dragStartPoint = null;
-                }
+                handleMouseReleased();
             }
-        });
 
-
-        addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // Zmodyfikowany warunek - teraz dopuszcza tryb edycji
-                if (mainWindow.getGameEngine().isRunning() && !inputHandler.isEditingMode()) {
-                    return;
-                }
-                int gridX = (e.getX() + cameraOffsetX) / 50;
-                int gridY = (e.getY() + cameraOffsetY) / 50;
-                System.out.println("Selected tool: " + selectedTool);
-
-                if (inputHandler.isEditingMode()) {
-
-                    if (selectedTool == 1) { // Tile
-                        placeTile(gridX, gridY);
-                    } else if (selectedTool == 2) {
-                        placeSpike(gridX, gridY);
-                    } else if (selectedTool == 3) {
-                        placeOrb(gridX, gridY, "red");
-                    } else if (selectedTool == 4) {
-                        placePad(gridX, gridY, selectedPadColor, "top", selectedPadPosition);
-                    } else if (selectedTool == 9) {
-                        placePortal(gridX, gridY, portalGameMode);
-                    } else if (selectedTool == 10) {
-                        placeSpeedPortal(gridX, gridY, portalSpeedMultiplier);
-                    } else if (selectedTool == 11) { // Delete
-                        deleteObject(gridX, gridY);
-                    }
-                }
+                handleMouseClicked(e);
             }
-
-
-
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (mainWindow.getInputHandler().isEditingMode()) {
-                    dragStartPoint = e.getPoint();
-                    mouseX = e.getX();
-                    mouseY = e.getY();
-                }
-            }
-
-
-
         });
     }
 
+    private void setupMouseMotionListeners() {
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                handleMouseDragged(e);
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                handleMouseMoved(e);
+            }
+        });
+    }
+
+    private void handleMouseDragged(MouseEvent e) {
+        if (mainWindow.getInputHandler().isEditingMode()) {
+            if (dragStartPoint != null) {
+                int dx = dragStartPoint.x - e.getX();
+                int dy = dragStartPoint.y - e.getY();
+
+                cameraOffsetX += dx;
+                cameraOffsetY += dy;
+
+                dragStartPoint = e.getPoint();
+                repaint();
+            }
+        }
+    }
+
+    private void handleMouseMoved(MouseEvent e) {
+        mouseX = e.getX();
+        mouseY = e.getY();
+    }
+
+    private void handleMousePressed(MouseEvent e) {
+        if (mainWindow.getInputHandler().isEditingMode()) {
+            dragStartPoint = e.getPoint();
+            mouseX = e.getX();
+            mouseY = e.getY();
+        }
+    }
+
+    private void handleMouseReleased() {
+        if (mainWindow.getInputHandler().isEditingMode()) {
+            dragStartPoint = null;
+        }
+    }
+
+    private void handleMouseClicked(MouseEvent e) {
+        if (mainWindow.getGameEngine().isRunning() && !mainWindow.getInputHandler().isEditingMode()) {
+            return;
+        }
+
+        int gridX = (e.getX() + cameraOffsetX) / 50;
+        int gridY = (e.getY() + cameraOffsetY) / 50;
+
+        if (mainWindow.getInputHandler().isEditingMode()) {
+            switch (selectedTool) {
+                case 1:
+                    placeTile(gridX, gridY);
+                    break;
+                case 2:
+                    placeSpike(gridX, gridY);
+                    break;
+                case 3:
+                    placeOrb(gridX, gridY);
+                    break;
+                case 4:
+                    placePad(gridX, gridY, selectedOrbDirection);
+                    break;
+                case 9:
+                    placePortal(gridX, gridY, portalGameMode);
+                    break;
+                case 10:
+                    placeSpeedPortal(gridX, gridY, portalSpeedMultiplier);
+                    break;
+                case 11:
+                    deleteObject(gridX, gridY);
+                    break;
+            }
+        }
+    }
+
     private void deleteObject(int gridX, int gridY) {
-        if (!isWithinBuildLimits(gridX * 50, gridY * 50)) {
+        if (isWithinBuildLimits(gridX * 50, gridY * 50)) {
             return;
         }
 
         System.out.println("Deleting object at gridX: " + gridX + ", gridY: " + gridY);
-        // Usuwanie kafelka
         Tile tileToRemove = null;
         for (Tile tile : world.getTiles()) {
             if (tile.getX() == gridX && tile.getY() == gridY) {
@@ -172,10 +178,9 @@ public class PlayerPanel extends JPanel {
             world.getTiles().remove(tileToRemove);
         }
 
-        // Usuwanie kolca
         Spike spikeToRemove = null;
         for (Spike spike : world.getSpikes()) {
-            if (spike.getX() == gridX && spike.getY() == gridY) {
+            if (spike.x() == gridX && spike.y() == gridY) {
                 spikeToRemove = spike;
                 break;
             }
@@ -184,7 +189,6 @@ public class PlayerPanel extends JPanel {
             world.getSpikes().remove(spikeToRemove);
         }
 
-        // Usuwanie orba
         Orb orbToRemove = null;
         for (Orb orb : world.getOrbs()) {
             if (orb.getX() == gridX && orb.getY() == gridY) {
@@ -196,7 +200,6 @@ public class PlayerPanel extends JPanel {
             world.getOrbs().remove(orbToRemove);
         }
 
-        // Usuwanie pada
         Pad padToRemove = null;
         for (Pad pad : World.getPads()) {
             if (pad.getX() == gridX && pad.getY() == gridY) {
@@ -208,7 +211,6 @@ public class PlayerPanel extends JPanel {
             World.getPads().remove(padToRemove);
         }
 
-        // Usuwanie portalu
         Portal portalToRemove = null;
         for (Portal portal : world.getPortals()) {
             if (portal.getX() == gridX && portal.getY() == gridY) {
@@ -220,7 +222,6 @@ public class PlayerPanel extends JPanel {
             world.getPortals().remove(portalToRemove);
         }
 
-        // Usuwanie portalu predkosci
         SpeedPortal speedPortalToRemove = null;
         for (SpeedPortal speedPortal : world.getSpeedPortals()) {
             if (speedPortal.getX() == gridX && speedPortal.getY() == gridY) {
@@ -251,14 +252,10 @@ public class PlayerPanel extends JPanel {
         }
     }
 
-
     public void setSelectedOrbDirection(String selectedOrbDirection) {
         this.selectedOrbDirection = selectedOrbDirection;
     }
 
-    public void setInputHandler(InputHandler inputHandler) {
-        this.inputHandler = inputHandler;
-    }
 
 
 
@@ -272,90 +269,6 @@ public class PlayerPanel extends JPanel {
         repaint();
     }
 
-    public void addMouseListenersToPlayerPanel(InputHandler inputHandler) {
-        this.inputHandler = inputHandler;
-        // Usuń istniejące listenery myszy
-        for (MouseListener ml : getMouseListeners()) {
-            removeMouseListener(ml);
-        }
-        for (MouseMotionListener mml : getMouseMotionListeners()) {
-            removeMouseMotionListener(mml);
-        }
-
-        // Dodaj MouseMotionListener
-        addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (inputHandler.isEditingMode()) {
-                    if (dragStartPoint != null) {
-                        int dx = dragStartPoint.x - e.getX();
-                        int dy = dragStartPoint.y - e.getY();
-
-                        cameraOffsetX += dx;
-                        cameraOffsetY += dy;
-
-                        dragStartPoint = e.getPoint();
-                        repaint();
-                    }
-                }
-            }
-
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                mouseX = e.getX();
-                mouseY = e.getY();
-            }
-        });
-
-        // Dodaj MouseListener
-        addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                System.out.println("PlayerPanel.mousePressed() called, InputHandler: " + mainWindow.getInputHandler());
-                if (inputHandler.isEditingMode()) {
-                    dragStartPoint = e.getPoint();
-                    mouseX = e.getX();
-                    mouseY = e.getY();
-                }
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                if (inputHandler.isEditingMode()) {
-                    dragStartPoint = null;
-                }
-            }
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (mainWindow.getGameEngine().isRunning()) {
-                    return;
-                }
-                int gridX = (e.getX() + cameraOffsetX) / 50;
-                int gridY = (e.getY() + cameraOffsetY) / 50;
-
-                if (selectedTool == 1) { // Tile
-                    placeTile(gridX, gridY);
-                } else if (selectedTool == 2) {
-                    placeSpike(gridX, gridY);
-                } else if (selectedTool == 3) {
-                    placeOrb(gridX, gridY, "red");
-                } else if (selectedTool == 4) {
-                    placePad(gridX, gridY, selectedPadColor, "top", selectedPadPosition);
-                }  else if (selectedTool == 9) {
-                    placePortal(gridX, gridY, portalGameMode);
-                } else if (selectedTool == 10) {
-                    placeSpeedPortal(gridX, gridY, portalSpeedMultiplier);
-                } else if (selectedTool == 11) { // Delete
-                    deleteObject(gridX, gridY);
-                }
-            }
-        });
-    }
-
-
-
-
     public void removeSaveAsButton() {
         for (Component comp : getComponents()) {
             if (comp instanceof JButton && ((JButton) comp).getText().equals("Save As...")) {
@@ -367,27 +280,15 @@ public class PlayerPanel extends JPanel {
         }
     }
 
-    public int getMouseX() {
-        return mouseX;
-    }
-
-    public int getMouseY() {
-        return mouseY;
-    }
-
-
-
-
-
     public void setWorld(World world) {
         this.world = world;
         this.isPlatformer = world.isPlatformer();
-        repaint(); // Zaktualizuj grafikę po zmianie świata
+        repaint();
     }
 
     public void setSelectedTool(int selectedTool) {
         this.selectedTool = selectedTool;
-        if (selectedTool != 9) { // Ustaw tryb gry na null, gdy nie wybieramy portalu
+        if (selectedTool != 9) {
             setPortalGameMode(null);
         }
         repaint();
@@ -401,7 +302,7 @@ public class PlayerPanel extends JPanel {
         });
 
         ImageLoader.loadImageAsync("src/main/java/org/example/game/img/spike.png", img -> {
-            spikeImage = img; // Załaduj obrazek kolca
+            spikeImage = img;
             repaint();
         });
 
@@ -522,28 +423,24 @@ public class PlayerPanel extends JPanel {
     }
 
     private boolean isWithinBuildLimits(int gridX, int gridY) {
-        // Poprawiona logika sprawdzania granic
-        return gridX * 50 >= MIN_BUILD_X + 50 && gridY * 50 >= MIN_BUILD_Y + 50  && gridY * 50 <= MAX_BUILD_Y - 50;
+        return gridX * 50 < MIN_BUILD_X + 50 || gridY * 50 < MIN_BUILD_Y + 50 || gridY * 50 > MAX_BUILD_Y - 50;
     }
-
-
 
     private void placeTile(int gridX, int gridY) {
         if (mainWindow.getGameEngine().isGamePaused()) {
             return;
         }
 
-        if (!isWithinBuildLimits(gridX, gridY)) {
+        if (isWithinBuildLimits(gridX, gridY)) {
             return;
         }
 
-        int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
+        int mouseX = this.mouseX;
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
 
-        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int mouseY = this.mouseY;
         int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
-        // Reszta logiki bez zmian, używamy adjustedGridX
         Tile existingTile = null;
         for (Tile tile : world.getTiles()) {
             if (tile.getX() == adjustedGridX && tile.getY() == adjustedGridY) {
@@ -566,19 +463,19 @@ public class PlayerPanel extends JPanel {
             return;
         }
 
-        if (!isWithinBuildLimits(gridX, gridY)) {
+        if (isWithinBuildLimits(gridX, gridY)) {
             return;
         }
 
-        int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
+        int mouseX = this.mouseX;
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
 
-        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int mouseY = this.mouseY;
         int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
         if (selectedTool == 2) {
             for (Spike spike : world.getSpikes()) {
-                if (spike.getX() == adjustedGridX && spike.getY() == adjustedGridY) {
+                if (spike.x() == adjustedGridX && spike.y() == adjustedGridY) {
                     world.getSpikes().remove(spike);
                     repaint();
                     return;
@@ -589,19 +486,18 @@ public class PlayerPanel extends JPanel {
         }
     }
 
-    private void placeOrb(int gridX, int gridY, String color) {
+    private void placeOrb(int gridX, int gridY) {
         if (mainWindow.getGameEngine().isGamePaused()) {
             return;
         }
 
-        if (!isWithinBuildLimits(gridX, gridY)) {
+        if (isWithinBuildLimits(gridX, gridY)) {
             return;
         }
 
-        int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
+        int mouseX = this.mouseX;
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
-
-        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int mouseY = this.mouseY;
         int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
         for (Orb orb : world.getOrbs()) {
@@ -619,29 +515,27 @@ public class PlayerPanel extends JPanel {
         repaint();
     }
 
-    private void placePad(int gridX, int gridY, String color, String position, String direction) {
+    private void placePad(int gridX, int gridY, String direction) {
         if (mainWindow.getGameEngine().isGamePaused()) {
             return;
         }
 
-        if (!isWithinBuildLimits(gridX, gridY)) {
+        if (isWithinBuildLimits(gridX, gridY)) {
             return;
         }
 
-        int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
+        int mouseX = this.mouseX;
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
-
-        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int mouseY = this.mouseY;
         int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
-        for (Pad pad : world.getPads()) {
+        for (Pad pad : World.getPads()) {
             if (pad.getX() == adjustedGridX && pad.getY() == adjustedGridY) {
                 World.getPads().remove(pad);
                 repaint();
                 return;
             }
         }
-        // Używamy nowego konstruktora, uwzględniającego position
         world.addPad(new Pad(adjustedGridX, adjustedGridY, selectedPadColor, selectedPadPosition, direction));
         repaint();
     }
@@ -651,14 +545,13 @@ public class PlayerPanel extends JPanel {
             return;
         }
 
-        if (!isWithinBuildLimits(gridX, gridY)) {
+        if (isWithinBuildLimits(gridX, gridY)) {
             return;
         }
 
-        int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
+        int mouseX = this.mouseX;
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
-
-        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int mouseY = this.mouseY;
         int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
         if (gameMode == null) {
@@ -682,14 +575,13 @@ public class PlayerPanel extends JPanel {
             return;
         }
 
-        if (!isWithinBuildLimits(gridX, gridY)) {
+        if (isWithinBuildLimits(gridX, gridY)) {
             return;
         }
 
-        int mouseX = this.mouseX; // Pobierz oryginalne współrzędne myszy
+        int mouseX = this.mouseX;
         int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
-
-        int mouseY = this.mouseY; // Pobierz oryginalne współrzędne myszy
+        int mouseY = this.mouseY;
         int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
         for (SpeedPortal portal : world.getSpeedPortals()) {
@@ -703,18 +595,16 @@ public class PlayerPanel extends JPanel {
         repaint();
     }
 
-
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
         Graphics2D g2d = (Graphics2D) g.create();
 
-        // Fill the background with light blue color
-        g2d.setColor(new Color(173, 216, 230)); // Light blue color
+
+        g2d.setColor(new Color(173, 216, 230));
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
-        // Przesunięcie kamery
         g2d.translate(-cameraOffsetX, -cameraOffsetY);
 
         if (mainWindow.getInputHandler().isEditingMode()) {
@@ -734,10 +624,9 @@ public class PlayerPanel extends JPanel {
 
         g2d.dispose();
 
-        // Przyciemnienie ekranu, jeśli gra jest zapauzowana
         if (isDimmed) {
             g2d = (Graphics2D) g.create();
-            g2d.setColor(new Color(0, 0, 0, 128)); // Półprzezroczysta czerń
+            g2d.setColor(new Color(0, 0, 0, 128));
             g2d.fillRect(0, 0, getWidth(), getHeight());
             g2d.dispose();
         }
@@ -761,32 +650,15 @@ public class PlayerPanel extends JPanel {
         g2d.setColor(Color.RED);
         g2d.setStroke(new BasicStroke(2));
 
-        // Skorygowane rysowanie linii
         int lineX = MIN_BUILD_X;
         int maxY = Math.max(getHeight(), MAX_BUILD_Y );
 
-        // Pionowa linia
         g2d.drawLine(lineX, MIN_BUILD_Y, lineX, maxY);
 
-        // Poziome linie
         g2d.drawLine(lineX, MIN_BUILD_Y, getWidth() + cameraOffsetX, MIN_BUILD_Y);
         g2d.drawLine(lineX, MAX_BUILD_Y, getWidth() + cameraOffsetX, MAX_BUILD_Y);
 
-
         System.out.println("lineX: " + lineX + ", maxY: " + maxY);
-    }
-
-    private void drawAttemptText(Graphics2D g2d) {
-        g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("Arial", Font.BOLD, 40));
-        if (!mainWindow.getInputHandler().isEditingMode()) {
-            g2d.drawString("Attempt " + mainWindow.getAttempts(), 200, 700);
-        }
-    }
-
-    private void drawWorldAndPlayer(Graphics2D g2d) {
-        drawPlayer(g2d);
-        drawWorld(g2d);
     }
 
     private void drawPlayer(Graphics2D g2d) {
@@ -795,19 +667,14 @@ public class PlayerPanel extends JPanel {
         double x = (int) player.getX();
         double y = (int) player.getY();
 
-        // Save the current transform
         AffineTransform originalTransform = g2d.getTransform();
 
-        // Translate to the player's position
         g2d.translate(x + 25, y + 25);
 
-        // Rotate around the center of the player
         g2d.rotate(Math.toRadians(player.getRotationAngle()));
 
-        // Translate back
         g2d.translate(-25, -25);
 
-        // Draw the player based on the current game mode
         if (player.getCurrentGameMode() == GameMode.UFO) {
             if (ufoImage != null) {
                 if (player.isGravityReversed()) {
@@ -868,15 +735,12 @@ public class PlayerPanel extends JPanel {
                 g2d.setColor(Color.PINK);
                 g2d.fillRect(0, 0, 50, 50);
             }
-
-
-
         } else if (player.getCurrentGameMode() == GameMode.SPIDER) {
             if (spiderImage != null) {
                 if (player.isGravityReversed()) {
-                    g2d.drawImage(spiderImage, 0, 50, 50, -50, null); // Spider upside down when gravity is reversed
+                    g2d.drawImage(spiderImage, 0, 50, 50, -50, null);
                 } else {
-                    g2d.drawImage(spiderImage, 0, 0, 50, 50, null); // Normal Spider
+                    g2d.drawImage(spiderImage, 0, 0, 50, 50, null);
                 }
             } else {
                 g2d.setColor(Color.ORANGE);
@@ -895,24 +759,18 @@ public class PlayerPanel extends JPanel {
             }
         }
 
-        // Restore the original transform
         g2d.setTransform(originalTransform);
 
-        // Debug text
         g2d.setColor(Color.BLACK);
         g2d.setFont(new Font("Arial", Font.BOLD, 20));
         g2d.drawString("Attempt " + mainWindow.getAttempts(), 10, 20);
     }
 
     private void drawGrid(Graphics2D g2d) {
-        g2d.setColor(Color.GRAY); // Kolor siatki
-
-
-        // Szerokość i wysokość panelu
+        g2d.setColor(Color.GRAY);
         int panelWidth = getWidth() * 5;
         int panelHeight = getHeight() * 5;
 
-        // Rysowanie pionowych linii
         for (int x = 0; x < panelWidth + cameraOffsetX; x += 50) {
             g2d.drawLine(x, cameraOffsetY, x, panelHeight + cameraOffsetY);
         }
@@ -920,7 +778,6 @@ public class PlayerPanel extends JPanel {
             g2d.drawLine(x, cameraOffsetY, x, panelHeight + cameraOffsetY);
         }
 
-        // Rysowanie poziomych linii
         for (int y = 0; y < panelHeight + cameraOffsetY; y += 50) {
             g2d.drawLine(cameraOffsetX, y, panelWidth + cameraOffsetX, y);
         }
@@ -931,7 +788,6 @@ public class PlayerPanel extends JPanel {
 
     private void drawWorld(Graphics2D g2d) {
         Rectangle cameraBounds = new Rectangle(cameraOffsetX, cameraOffsetY, getWidth(), getHeight());
-
 
         for (Tile tile : world.getTiles()) drawTile(g2d, tile, cameraBounds);
         for (Spike spike : world.getSpikes()) drawSpike(g2d, spike);
@@ -947,9 +803,8 @@ public class PlayerPanel extends JPanel {
 
         Image portalImage = portalImages.get(portal.getTargetGameMode());
         if (portalImage != null) {
-            g2d.drawImage(portalImage, (int)x, (int)y, 50, 100, null); // Rysuj obrazek o wymiarach 50x100
+            g2d.drawImage(portalImage, (int)x, (int)y, 50, 100, null);
         } else {
-            // Jeśli obrazek nie został załadowany, rysuj kolorowy prostokąt jako fallback
             switch (portal.getTargetGameMode()) {
                 case CUBE:
                     g2d.setColor(Color.GREEN);
@@ -1024,8 +879,8 @@ public class PlayerPanel extends JPanel {
     }
 
     private void drawSpike(Graphics2D g2d, Spike spike) {
-        int x = spike.getX() * 50;
-        int y = spike.getY() * 50;
+        int x = spike.x() * 50;
+        int y = spike.y() * 50;
 
         if (spikeImage != null) {
             g2d.drawImage(spikeImage, x, y, 50, 50, null);
@@ -1069,10 +924,8 @@ public class PlayerPanel extends JPanel {
         Image padImage = padImages.get(padKey);
         if (padImage != null) {
             if ("bottom".equals(pad.getPosition())) {
-                // Rysuj pada na górze kratki, jeśli pozycja to "bottom"
                 g2d.drawImage(padImage, x, y + 20, 50, -20, null);
             } else {
-                // Rysuj pada na dole kratki, jeśli pozycja to "top"
                 g2d.drawImage(padImage, x, y + 30, 50, 20, null);
             }
         } else {
@@ -1084,10 +937,6 @@ public class PlayerPanel extends JPanel {
             g2d.setColor(Color.RED);
             g2d.drawRect(x, y, 50, 50);
         }
-    }
-
-    public int getCameraOffsetX() {
-        return cameraOffsetX;
     }
 
     public int getCameraOffsetY() {
@@ -1138,8 +987,7 @@ public class PlayerPanel extends JPanel {
         return false;
     }
     public boolean isCollisionWithCeilingOrFloor(double x, double y, boolean isGravityReversed) {
-        double checkY = isGravityReversed ? y : y + 50; // Sprawdź górną krawędź dla odwróconej grawitacji, dolną dla normalnej
-
+        double checkY = isGravityReversed ? y : y + 50;
         for (Tile tile : world.getTiles()) {
             if (tile.isSolid() && x < tile.getX() * 50 + 50 && x + 50 > tile.getX() * 50 &&
                     checkY >= tile.getY() * 50 && checkY <= tile.getY() * 50 + 50) {
@@ -1152,20 +1000,15 @@ public class PlayerPanel extends JPanel {
     public boolean isCollision(double playerX, double playerY, int spikeX, int spikeY) {
         int playerWidth = 50;
         int playerHeight = 50;
-
-        // Współrzędne prostokąta wewnątrz trójkąta
         double rectX = spikeX * 50 + 19;
         double rectY = spikeY * 50 + 15;
         int rectWidth = 12;
         int rectHeight = 20;
 
-        // Sprawdzenie, czy prostokąt gracza nachodzi na prostokąt hitboxa
-        boolean collision = playerX < rectX + rectWidth &&
+        return playerX < rectX + rectWidth &&
                 playerX + playerWidth > rectX &&
                 playerY < rectY + rectHeight &&
                 playerY + playerHeight > rectY;
-
-        return collision;
     }
 
     public Player getPlayer() {
@@ -1188,7 +1031,7 @@ public class PlayerPanel extends JPanel {
     }
 
     public Pad getActivatedPad(Player player) {
-        for (Pad pad : world.getPads()) {
+        for (Pad pad : World.getPads()) {
             if (Math.abs(player.getX() - pad.getX() * 50) < 50 && Math.abs(player.getY() - pad.getY() * 50) < 50) {
                 return pad;
             }

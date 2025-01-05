@@ -1,7 +1,6 @@
 package org.example;
 
 import org.example.game.engine.GameEngine;
-import org.example.game.engine.InputHandler;
 import org.example.game.entities.GameMode;
 import org.example.game.ui.MainWindow;
 import org.example.game.entities.Player;
@@ -16,7 +15,7 @@ public class Main {
 
             Player player = MainWindow.createPlayer();
 
-            MainWindow mainWindow = new MainWindow(player, new World()); // Przekazujemy pusty świat
+            MainWindow mainWindow = new MainWindow(player, new World());
 
             MainWindow.configureMainWindow(mainWindow, gameWidth, gameHeight);
             mainWindow.setVisible(false);
@@ -24,19 +23,12 @@ public class Main {
 
             MainWindow.setPlayerPosition(player, gameHeight);
 
-
-
-            // Utworzenie GameEngine
             GameEngine gameEngine = new GameEngine(mainWindow, player);
             gameEngine.setCurrentGameMode(GameMode.CUBE);
             mainWindow.setGameEngine(gameEngine);
 
-            // Ustawienie GameEngine w MainWindow
             gameEngine.setMainWindow(mainWindow);
 
-
-
-            // Pokaż menu główne
             mainWindow.showMainMenu();
         });
     }

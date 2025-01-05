@@ -5,17 +5,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 
 public class Pad {
-    private int x;
-    private int y;
-    private String color;
+    private final int x;
+    private final int y;
+    private final String color;
     private String direction;
     private String position;
-    private long lastActivatedTime; // Dodajemy zmienną przechowującą czas ostatniej aktywacji
-    private static final long COOLDOWN_TIME = 200; // Czas cooldownu w milisekundach (0.1 sekundy)
+    private long lastActivatedTime;
+    private static final long COOLDOWN_TIME = 200;
 
-    public Pad() {
-        this.lastActivatedTime = 0;
-    }
 
     @JsonCreator
     public Pad(@JsonProperty("x") int x, @JsonProperty("y") int y, @JsonProperty("color") String color,
@@ -24,10 +21,9 @@ public class Pad {
         this.y = y;
         this.color = color;
         this.position = position;
-        this.direction = direction; // Teraz direction jest uwzględniane przy tworzeniu pada
+        this.direction = direction;
         this.lastActivatedTime = 0;
     }
-
 
     public int getX() {
         return x;
@@ -60,27 +56,20 @@ public class Pad {
     }
 
     public void activate(Player player) {
-        // Sprawdzamy, czy minął czas cooldownu
-        if (System.currentTimeMillis() - lastActivatedTime < COOLDOWN_TIME) {
+        if (isCooldownActive()) {
             return;
         }
-
-        boolean isShip = player.isShipMode();
-        boolean isUfo = player.isUfoMode();
 
         switch (color) {
             case "yellow":
             case "purple":
             case "red":
-                handleYellowPurpleRedPads(player, isShip, isUfo);
+                handleYellowPurpleRedPads(player);
                 break;
             case "blue":
-                handleBluePad(player, isShip);
-                // Aktualizujemy czas ostatniej aktywacji tylko dla niebieskiego pada
-                lastActivatedTime = System.currentTimeMillis();
+                handleBluePad(player);
                 break;
             case "spider":
-                // Dla spider pada, aktywacja zależy od kierunku
                 handleSpiderPad(player);
                 break;
             default:
@@ -88,48 +77,54 @@ public class Pad {
         }
     }
 
-    private void handleYellowPurpleRedPads(Player player, boolean isShip, boolean isUfo) {
-        double velocityY;
+    private boolean isCooldownActive() {
+        return System.currentTimeMillis() - lastActivatedTime < COOLDOWN_TIME;
+    }
 
-        switch (color) {
-            case "yellow":
-                velocityY = isShip ? 13 : isUfo ? 15 : 16;
-                break;
-            case "purple":
-                velocityY = isShip ? 10 : isUfo ? 12 : 10;
-                break;
-            case "red":
-                velocityY = isShip ? 16 : isUfo ? 18 : 20;
-                break;
-            default:
-                throw new IllegalStateException("Nieznany kolor pada: " + color);
-        }
-
-        if (direction.equals("down")) {
-            velocityY = -velocityY;
-        }
-
+    private void handleYellowPurpleRedPads(Player player) {
+        double velocityY = calculateVelocity(player);
         player.setVelocityY(player.isGravityReversed() ? velocityY : -velocityY);
 
-        if (isShip || isUfo) {
+        if (player.isShipMode() || player.isUfoMode()) {
             player.setOrbEffectActive(true);
-            player.setOrbEffectDuration(isShip ? (color.equals("red") ? 15 : 10) : (color.equals("red") ? 4 : 0));
+            player.setOrbEffectDuration(calculateEffectDuration(player));
         } else {
             player.setJumping(true);
         }
     }
 
-    private void handleBluePad(Player player, boolean isShip) {
+    private double calculateVelocity(Player player) {
+        boolean isShip = player.isShipMode();
+        boolean isUfo = player.isUfoMode();
+
+        double velocityY = switch (color) {
+            case "yellow" -> isShip ? 13 : isUfo ? 15 : 16;
+            case "purple" -> isShip ? 10 : isUfo ? 12 : 10;
+            case "red" -> isShip ? 16 : isUfo ? 18 : 20;
+            default -> throw new IllegalStateException("Nieznany kolor pada: " + color);
+        };
+
+        return direction.equals("down") ? -velocityY : velocityY;
+    }
+
+    private int calculateEffectDuration(Player player) {
+        if (player.isShipMode()) {
+            return color.equals("red") ? 15 : 10;
+        } else if (player.isUfoMode()) {
+            return color.equals("red") ? 4 : 0;
+        } else {
+            return 0;
+        }
+    }
+
+    private void handleBluePad(Player player) {
         player.setGravityReversed(!player.isGravityReversed());
-        player.setVelocityY(player.isGravityReversed() ? - (isShip ? 7 : 16) : (isShip ? 7 : 16));
+        player.setVelocityY(player.isGravityReversed() ? -(player.isShipMode() ? 7 : 16) : (player.isShipMode() ? 7 : 16));
+        lastActivatedTime = System.currentTimeMillis();
     }
 
     private void handleSpiderPad(Player player) {
-        if ("up".equals(direction)) {
-            player.setGravityReversed(true);
-        } else if ("down".equals(direction)) {
-            player.setGravityReversed(false);
-        }
+        player.setGravityReversed("up".equals(direction));
         player.setTeleportPad(true);
         player.setSpiderOrbActivated(true);
     }

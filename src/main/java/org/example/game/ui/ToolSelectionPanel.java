@@ -10,37 +10,27 @@ import java.awt.geom.RoundRectangle2D;
 
 public class ToolSelectionPanel extends JPanel {
     private final MainWindow mainWindow;
-    private JComboBox<String> toolSelectionComboBox;
+    private final JComboBox<String> toolSelectionComboBox;
     private JComboBox<String> portalSelectionComboBox;
     private JComboBox<String> speedSelectionComboBox;
     private JComboBox<String> orbSelectionComboBox;
     private JComboBox<String> padSelectionComboBox;
-    private JLabel toolLabel;
-    private JLabel toolPanelLabel;
+    private final JLabel toolLabel;
     private JButton saveButton;
-    private JButton saveAsButton;
-    private JButton backButton;
-    private GridBagConstraints gbc;
-    private int toolSelectionComboBoxY;
-    private int toolLabelY;
-    private int defaultComboBoxWidth = 150;
-    private int toolLabelDescY;
+    private final GridBagConstraints gbc;
+    private final int defaultComboBoxWidth = 150;
     private final int SECOND_COMBOBOX_Y = 2;
-    private int orbDirectionComboBoxY; // Pozycja Y dla orbDirectionComboBox
+    private final int orbDirectionComboBoxY;
     private JCheckBox hitboxCheckBox;
     private JCheckBox platformerCheckBox;
     private JCheckBox fullscreenCheckBox;
     private JComboBox<String> orbDirectionComboBox;
-    private String selectedOrbDirection = "up";
     private JComboBox<String> padPositionComboBox;
-    private String selectedPadPosition = "top"; // Domyślna pozycja dla pada
 
-    private final String[] padPositions = {"top", "bottom"}; // Zmienione opcje na "top" i "bottom"
-
-    private final String[] toolNames = {"None", "Tile", "Spike", "Orb", "Pad", "Portals", "Speed", "Delete"};
+    private final String[] padPositions = {"top", "bottom"};
     private final String[] portalNames = {"Select", "Cube", "Ship", "Ball", "Ufo", "Wave", "Robot", "Spider"};
     private final String[] speedNames = {"Select", "Slow", "Normal", "Fast", "Very Fast", "Extremely Fast"};
-    private final String[] orbColors = {"Select", "Yellow", "Purple", "Red", "Blue", "Green", "Black", "Spider"};
+    private final String[] orbColors = {"Select", "Yellow", "Purple", "Red", "Blue", "Green", "Black", "Spider", "Teleport"};
     private final String[] padColors = {"Select", "Yellow", "Purple", "Red", "Blue", "Spider"};
     private final String[] orbDirections = {"up", "down"};
 
@@ -58,20 +48,51 @@ public class ToolSelectionPanel extends JPanel {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(5, 5, 5, 5);
 
-        // Ustawienie pozycji Y dla orbDirectionComboBox zaraz po inicjalizacji gbc
         orbDirectionComboBoxY = 4;
 
-        toolPanelLabel = createLabel("Tool:");
+        JLabel toolPanelLabel = createLabel("Tool:");
         add(toolPanelLabel, gbc);
-        toolLabelY = gbc.gridy;
-
+        String[] toolNames = {"None", "Tile", "Spike", "Orb", "Pad", "Portals", "Speed", "Delete"};
         toolSelectionComboBox = createStyledComboBox(toolNames);
         toolSelectionComboBox.addItemListener(this::handleToolSelection);
         toolSelectionComboBox.setPreferredSize(new Dimension(defaultComboBoxWidth, toolSelectionComboBox.getPreferredSize().height));
         gbc.gridy++;
         add(toolSelectionComboBox, gbc);
-        toolSelectionComboBoxY = gbc.gridy;
 
+        initializeComboBoxes();
+
+        gbc.gridy = SECOND_COMBOBOX_Y;
+        add(new JLabel(" "), gbc);
+
+        toolLabel = createLabel("Tool: None");
+        toolLabel.setForeground(Color.WHITE);
+        gbc.gridy = 5;
+        add(toolLabel, gbc);
+
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0));
+        buttonPanel.setOpaque(false);
+        gbc.gridy = 6;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.CENTER;
+        add(buttonPanel, gbc);
+
+        createButtons(buttonPanel);
+
+        JPanel backButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        backButtonPanel.setOpaque(false);
+        gbc.gridy = 7;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 0, 0, 0);
+        add(backButtonPanel, gbc);
+
+        createBackButton(backButtonPanel);
+        createCheckBoxes();
+
+        setVisible(true);
+    }
+
+    private void initializeComboBoxes() {
         portalSelectionComboBox = createStyledComboBox(portalNames);
         portalSelectionComboBox.addItemListener(this::handlePortalSelection);
         portalSelectionComboBox.setPreferredSize(new Dimension(defaultComboBoxWidth, portalSelectionComboBox.getPreferredSize().height));
@@ -91,24 +112,10 @@ public class ToolSelectionPanel extends JPanel {
         padSelectionComboBox = createStyledComboBox(padColors);
         padSelectionComboBox.addItemListener(this::handlePadSelection);
         padSelectionComboBox.setPreferredSize(new Dimension(defaultComboBoxWidth, padSelectionComboBox.getPreferredSize().height));
+    }
 
-        gbc.gridy = SECOND_COMBOBOX_Y;
-        add(new JLabel(" "), gbc);
-
-        toolLabel = createLabel("Tool: None");
-        toolLabel.setForeground(Color.WHITE);
-        gbc.gridy = 5;
-        add(toolLabel, gbc);
-        toolLabelDescY = gbc.gridy;
-
-        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0));
-        buttonPanel.setOpaque(false);
-        gbc.gridy = 6;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.anchor = GridBagConstraints.CENTER;
-        add(buttonPanel, gbc);
-
-        saveAsButton = createStyledButton("Save As...");
+    private void createButtons(JPanel buttonPanel) {
+        JButton saveAsButton = createStyledButton("Save As...");
         saveAsButton.addActionListener(e -> mainWindow.showSaveAsDialog());
         buttonPanel.add(saveAsButton);
 
@@ -121,16 +128,10 @@ public class ToolSelectionPanel extends JPanel {
             }
         });
         buttonPanel.add(saveButton);
+    }
 
-        JPanel backButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        backButtonPanel.setOpaque(false);
-        gbc.gridy = 7;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(10, 0, 0, 0);
-        add(backButtonPanel, gbc);
-
-        backButton = createStyledButton("Back");
+    private void createBackButton(JPanel backButtonPanel) {
+        JButton backButton = createStyledButton("Back");
         backButton.addActionListener(e -> {
             if (mainWindow.isFullScreen()) {
                 mainWindow.toggleFullScreen();
@@ -143,7 +144,9 @@ public class ToolSelectionPanel extends JPanel {
             mainWindow.showMainMenu();
         });
         backButtonPanel.add(backButton);
+    }
 
+    private void createCheckBoxes() {
         hitboxCheckBox = new JCheckBox("Show Hitboxes");
         hitboxCheckBox.setSelected(false);
         hitboxCheckBox.setFocusPainted(false);
@@ -173,18 +176,14 @@ public class ToolSelectionPanel extends JPanel {
         fullscreenCheckBox.setFont(new Font("Arial", Font.BOLD, 14));
         fullscreenCheckBox.setForeground(Color.WHITE);
         fullscreenCheckBox.setBackground(new Color(60, 60, 60));
-        fullscreenCheckBox.addActionListener(e -> {
-            mainWindow.toggleFullScreen();
-        });
+        fullscreenCheckBox.addActionListener(e -> mainWindow.toggleFullScreen());
         gbc.gridy++;
         add(fullscreenCheckBox, gbc);
-
-        setVisible(true);
     }
 
     private void handleOrbDirectionSelection(ItemEvent e) {
         if (e.getStateChange() == ItemEvent.SELECTED) {
-            selectedOrbDirection = (String) orbDirectionComboBox.getSelectedItem();
+            String selectedOrbDirection = (String) orbDirectionComboBox.getSelectedItem();
             mainWindow.getPlayerPanel().setSelectedOrbDirection(selectedOrbDirection);
         }
     }
@@ -192,14 +191,8 @@ public class ToolSelectionPanel extends JPanel {
     private void handleToolSelectionChange() {
         String selectedToolName = (String) toolSelectionComboBox.getSelectedItem();
 
-        // Najpierw usuń wszystkie "opcjonalne" combo boxy
-        removePortalSelectionComboBox();
-        removeSpeedSelectionComboBox();
-        removeOrbSelectionComboBox();
-        removeOrbDirectionComboBox();
-        removePadSelectionComboBox();
+        removeOptionalComboBoxes();
 
-        // Zaktualizuj wybrane narzędzie
         switch (selectedToolName) {
             case "Tile":
                 mainWindow.getPlayerPanel().setSelectedTool(1);
@@ -228,6 +221,8 @@ public class ToolSelectionPanel extends JPanel {
                 mainWindow.getPlayerPanel().setSelectedTool(11);
                 System.out.println("Selected tool set to 11 (Delete)");
                 break;
+            case null:
+                break;
             default:
                 mainWindow.getPlayerPanel().setSelectedTool(0);
                 break;
@@ -238,14 +233,23 @@ public class ToolSelectionPanel extends JPanel {
         repaint();
     }
 
+    private void removeOptionalComboBoxes() {
+        removePortalSelectionComboBox();
+        removeSpeedSelectionComboBox();
+        removeOrbSelectionComboBox();
+        removeOrbDirectionComboBox();
+        removePadSelectionComboBox();
+        removePadDirectionComboBox();
+    }
+
     private void addPadPositionComboBox() {
         if (padPositionComboBox == null) {
             padPositionComboBox = createStyledComboBox(padPositions);
             padPositionComboBox.addItemListener(this::handlePadPositionSelection);
             padPositionComboBox.setPreferredSize(new Dimension(defaultComboBoxWidth, padPositionComboBox.getPreferredSize().height));
         }
-        if (!isComponentOnPanel(padPositionComboBox)) {
-            gbc.gridy = 3; // Ustaw pozycję Y dla padPositionComboBox
+        if (isComponentOnPanel(padPositionComboBox)) {
+            gbc.gridy = 3;
             add(padPositionComboBox, gbc);
             revalidate();
             repaint();
@@ -258,8 +262,8 @@ public class ToolSelectionPanel extends JPanel {
 
     private void handlePadPositionSelection(ItemEvent e) {
         if (e.getStateChange() == ItemEvent.SELECTED) {
-            selectedPadPosition = (String) padPositionComboBox.getSelectedItem();
-            mainWindow.getPlayerPanel().setSelectedPadPosition(selectedPadPosition); // Ustaw pozycję pada w PlayerPanel
+            String selectedPadPosition = (String) padPositionComboBox.getSelectedItem();
+            mainWindow.getPlayerPanel().setSelectedPadPosition(selectedPadPosition);
         }
     }
 
@@ -291,7 +295,7 @@ public class ToolSelectionPanel extends JPanel {
     }
 
     private void addOrbSelectionComboBox() {
-        if (!isComponentOnPanel(orbSelectionComboBox)) {
+        if (isComponentOnPanel(orbSelectionComboBox)) {
             gbc.gridy = SECOND_COMBOBOX_Y;
             add(orbSelectionComboBox, gbc);
             revalidate();
@@ -300,7 +304,7 @@ public class ToolSelectionPanel extends JPanel {
     }
 
     private void addPadSelectionComboBox() {
-        if (!isComponentOnPanel(padSelectionComboBox)) {
+        if (isComponentOnPanel(padSelectionComboBox)) {
             gbc.gridy = SECOND_COMBOBOX_Y;
             add(padSelectionComboBox, gbc);
             revalidate();
@@ -309,7 +313,7 @@ public class ToolSelectionPanel extends JPanel {
     }
 
     private void addPortalSelectionComboBox() {
-        if (!isComponentOnPanel(portalSelectionComboBox)) {
+        if (isComponentOnPanel(portalSelectionComboBox)) {
             gbc.gridy = SECOND_COMBOBOX_Y;
             add(portalSelectionComboBox, gbc);
             revalidate();
@@ -318,7 +322,7 @@ public class ToolSelectionPanel extends JPanel {
     }
 
     private void addSpeedSelectionComboBox() {
-        if (!isComponentOnPanel(speedSelectionComboBox)) {
+        if (isComponentOnPanel(speedSelectionComboBox)) {
             gbc.gridy = SECOND_COMBOBOX_Y;
             add(speedSelectionComboBox, gbc);
             revalidate();
@@ -326,9 +330,8 @@ public class ToolSelectionPanel extends JPanel {
         }
     }
 
-    // Metody do dodawania i usuwania orbDirectionComboBox
     private void addOrbDirectionComboBox() {
-        if (!isComponentOnPanel(orbDirectionComboBox)) {
+        if (isComponentOnPanel(orbDirectionComboBox)) {
             gbc.gridy = orbDirectionComboBoxY;
             add(orbDirectionComboBox, gbc);
             revalidate();
@@ -347,10 +350,10 @@ public class ToolSelectionPanel extends JPanel {
     private boolean isComponentOnPanel(Component component) {
         for (Component comp : getComponents()) {
             if (comp == component) {
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     @Override
@@ -429,6 +432,7 @@ public class ToolSelectionPanel extends JPanel {
         if (e.getStateChange() == ItemEvent.SELECTED) {
             String selectedOrbColor = (String) orbSelectionComboBox.getSelectedItem();
             if (!"Select".equals(selectedOrbColor)) {
+                assert selectedOrbColor != null;
                 mainWindow.getPlayerPanel().setSelectedOrbColor(selectedOrbColor.toLowerCase());
                 if ("Spider".equals(selectedOrbColor)) {
                     addOrbDirectionComboBox();
@@ -450,6 +454,7 @@ public class ToolSelectionPanel extends JPanel {
     private void handlePortalSelectionChange() {
         String selectedPortal = (String) portalSelectionComboBox.getSelectedItem();
         if (!"Select".equals(selectedPortal)) {
+            assert selectedPortal != null;
             mainWindow.getPlayerPanel().setPortalGameMode(GameMode.valueOf(selectedPortal.toUpperCase()));
         }
     }
@@ -473,20 +478,18 @@ public class ToolSelectionPanel extends JPanel {
                 case "Extremely Fast":
                     mainWindow.getPlayerPanel().setPortalSpeedMultiplier(1.849);
                     break;
+                case null:
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected value: " + selectedSpeed);
             }
-        }
-    }
-
-    private void handleOrbSelectionChange() {
-        String selectedOrbColor = (String) orbSelectionComboBox.getSelectedItem();
-        if (!"Select".equals(selectedOrbColor)) {
-            mainWindow.getPlayerPanel().setSelectedOrbColor(selectedOrbColor.toLowerCase());
         }
     }
 
     private void handlePadSelectionChange() {
         String selectedPadColor = (String) padSelectionComboBox.getSelectedItem();
         if (!"Select".equals(selectedPadColor)) {
+            assert selectedPadColor != null;
             mainWindow.getPlayerPanel().setSelectedPadColor(selectedPadColor.toLowerCase());
         }
     }

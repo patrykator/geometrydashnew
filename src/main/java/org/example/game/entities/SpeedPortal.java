@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SpeedPortal extends Entity {
-    private double speedMultiplier;
+    private final double speedMultiplier;
 
     @JsonCreator
     public SpeedPortal(@JsonProperty("x") int x, @JsonProperty("y") int y, @JsonProperty("speedMultiplier") double speedMultiplier) {
@@ -14,9 +14,5 @@ public class SpeedPortal extends Entity {
 
     public double getSpeedMultiplier() {
         return speedMultiplier;
-    }
-
-    public void setSpeedMultiplier(double speedMultiplier) {
-        this.speedMultiplier = speedMultiplier;
     }
 }

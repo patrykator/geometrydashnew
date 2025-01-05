@@ -7,46 +7,42 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FragmentAnimation {
-    private List<Fragment> fragments;
+    private final List<Fragment> fragments;
     private boolean animationFinished;
+    private static final int TARGET_WIDTH = 50;
+    private static final int TARGET_HEIGHT = 50;
 
     public FragmentAnimation(double x, double y, BufferedImage playerImage, int numFragmentsX, int numFragmentsY, double initialSpeed, double gravity) {
         this.fragments = new ArrayList<>();
         this.animationFinished = false;
 
-        // Docelowy rozmiar animacji
-        int targetWidth = 50;
-        int targetHeight = 50;
+        double scaleX = (double) TARGET_WIDTH / playerImage.getWidth(null);
+        double scaleY = (double) TARGET_HEIGHT / playerImage.getHeight(null);
 
-        // Skalowanie fragmentów
-        double scaleX = (double) targetWidth / playerImage.getWidth(null);
-        double scaleY = (double) targetHeight / playerImage.getHeight(null);
-
-        // Podziel obraz na fragmenty
         int fragmentWidth = playerImage.getWidth(null) / numFragmentsX;
         int fragmentHeight = playerImage.getHeight(null) / numFragmentsY;
 
         for (int i = 0; i < numFragmentsX; i++) {
             for (int j = 0; j < numFragmentsY; j++) {
-                int startX = i * fragmentWidth;
-                int startY = j * fragmentHeight;
-                BufferedImage fragmentImage = playerImage.getSubimage(startX, startY, fragmentWidth, fragmentHeight);
+                BufferedImage fragmentImage = playerImage.getSubimage(i * fragmentWidth, j * fragmentHeight, fragmentWidth, fragmentHeight);
+                BufferedImage scaledFragmentImage = getScaledFragmentImage(fragmentImage, scaleX, scaleY);
 
-                // Skaluj fragment
-                BufferedImage scaledFragmentImage = new BufferedImage((int) (fragmentWidth * scaleX), (int) (fragmentHeight * scaleY), BufferedImage.TYPE_INT_ARGB);
-                Graphics2D g2d = scaledFragmentImage.createGraphics();
-                g2d.drawImage(fragmentImage, 0, 0, (int) (fragmentWidth * scaleX), (int) (fragmentHeight * scaleY), null);
-                g2d.dispose();
-
-                double angle = Math.random() * 2 * Math.PI; // Losowy kierunek
-                double speed = initialSpeed * (1 + Math.random() * 0.5); // Losowa prędkość
+                double angle = Math.random() * 2 * Math.PI;
+                double speed = initialSpeed * (1 + Math.random() * 0.5);
                 double vx = speed * Math.cos(angle);
                 double vy = speed * Math.sin(angle);
 
-                // Pozycjonowanie fragmentów w odniesieniu do docelowego rozmiaru
-                fragments.add(new Fragment(x + startX * scaleX + (fragmentWidth * scaleX) / 2.0, y + startY * scaleY + (fragmentHeight * scaleY) / 2.0, vx, vy, gravity, scaledFragmentImage));
+                fragments.add(new Fragment(x + i * fragmentWidth * scaleX + (fragmentWidth * scaleX) / 2.0, y + j * fragmentHeight * scaleY + (fragmentHeight * scaleY) / 2.0, vx, vy, gravity, scaledFragmentImage));
             }
         }
+    }
+
+    private BufferedImage getScaledFragmentImage(BufferedImage fragmentImage, double scaleX, double scaleY) {
+        BufferedImage scaledFragmentImage = new BufferedImage((int) (fragmentImage.getWidth() * scaleX), (int) (fragmentImage.getHeight() * scaleY), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = scaledFragmentImage.createGraphics();
+        g2d.drawImage(fragmentImage, 0, 0, (int) (fragmentImage.getWidth() * scaleX), (int) (fragmentImage.getHeight() * scaleY), null);
+        g2d.dispose();
+        return scaledFragmentImage;
     }
 
     public void update() {
@@ -75,11 +71,13 @@ public class FragmentAnimation {
         private double y;
         private double vx;
         private double vy;
-        private double gravity;
-        private BufferedImage image;
+        private final double gravity;
+        private final BufferedImage image;
         private boolean finished;
-        private double rotation; // Dodane pole na rotację
-        private double rotationSpeed; // Dodane pole na prędkość rotacji
+        private double rotation;
+        private final double rotationSpeed;
+        private static final double SPEED_DECREASE_FACTOR = 0.995;
+        private static final int DISAPPEAR_Y_THRESHOLD = 900;
 
         public Fragment(double x, double y, double vx, double vy, double gravity, BufferedImage image) {
             this.x = x;
@@ -90,7 +88,7 @@ public class FragmentAnimation {
             this.image = image;
             this.finished = false;
             this.rotation = 0;
-            this.rotationSpeed = (Math.random() - 0.5) * 0.2; // Losowa prędkość rotacji
+            this.rotationSpeed = (Math.random() - 0.5) * 0.2;
         }
 
         public void update() {
@@ -100,12 +98,10 @@ public class FragmentAnimation {
                 vy += gravity;
                 rotation += rotationSpeed;
 
-                // Zmniejsz prędkość w czasie - ale wolniej
-                vx *= 0.995; // Było 0.99
-                vy *= 0.995; // Było 0.99
+                vx *= SPEED_DECREASE_FACTOR;
+                vy *= SPEED_DECREASE_FACTOR;
 
-                // Szybsze znikanie
-                if (y > 900) { // Było 1000
+                if (y > DISAPPEAR_Y_THRESHOLD) {
                     finished = true;
                 }
             }

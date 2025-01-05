@@ -5,9 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class Tile {
     private int x;
     private int y;
-    private boolean isSolid;
+    private final boolean isSolid;
 
-    public Tile(){}
 
     @JsonCreator
     public Tile(@JsonProperty("x") int x, @JsonProperty("y") int y, @JsonProperty("isSolid") boolean isSolid) {
@@ -32,12 +31,8 @@ public class Tile {
         this.y = y;
     }
 
-    public boolean isSolid() {
+    @JsonProperty("isSolid")
+    public boolean isSolid() { // Getter remains isSolid()
         return isSolid;
     }
-
-    public void setSolid(boolean solid) {
-        isSolid = solid;
-    }
-
 }
