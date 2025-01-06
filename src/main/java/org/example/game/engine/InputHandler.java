@@ -118,15 +118,16 @@ public class InputHandler extends KeyAdapter {
                 Math.abs(player.getY() - orb.getY() * 50) < 50;
     }
 
+
     private void activateOrb(Orb orb) {
-        System.out.println("Orb activated: " + orb.getColor() + ", Ship mode: " + player.isShipMode());
-        System.out.println("Player velocityY: " + player.getVelocityY());
         orb.activate(player);
         orbActivated = true;
 
         if ("spider".equals(orb.getColor())) {
             teleportActivated = true;
             spiderOrbKeyPressed = true;
+        } else if ("teleport".equals(orb.getColor())) {
+            gameEngine.handleTeleportOrbActivation(player, orb);
         }
     }
 

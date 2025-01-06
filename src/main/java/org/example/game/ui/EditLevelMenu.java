@@ -257,7 +257,7 @@ public class EditLevelMenu extends JFrame {
         world.setPlatformer(false);
 
         mainWindow.getPlayerPanel().setWorld(world);
-        mainWindow.respawnPlayerIfNeeded(mainWindow.getPlayerPanel().getPlayer());
+        MainWindow.setPlayerPosition(mainWindow.getPlayerPanel().getPlayer(), mainWindow.getHeight() - 37);
         mainWindow.getPlayerPanel().setVisible(true);
         mainWindow.setVisible(true);
         mainWindow.getInputHandler().setEditingMode(true);

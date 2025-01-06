@@ -13,6 +13,8 @@ public class LevelData {
     private List<Pad> pads = new ArrayList<>();
     private List<Portal> portals = new ArrayList<>();
     private List<SpeedPortal> speedPortals = new ArrayList<>();
+    private List<LevelEnd> levelEnds = new ArrayList<>();
+    private List<Checkpoint> checkpoints = new ArrayList<>();
     private boolean isPlatformer;
 
     public boolean isPlatformer() {
@@ -48,6 +50,14 @@ public class LevelData {
         this.tiles = tiles;
     }
 
+    public List<LevelEnd> getLevelEnds() {
+        return levelEnds;
+    }
+
+    public void setLevelEnds(List<LevelEnd> levelEnds) {
+        this.levelEnds = levelEnds;
+    }
+
     public List<Spike> getSpikes() {
         return spikes;
     }
@@ -70,5 +80,13 @@ public class LevelData {
 
     public void setPads(List<Pad> pads) {
         this.pads = pads;
+    }
+
+    public List<Checkpoint> getCheckpoints() {
+        return checkpoints;
+    }
+
+    public void setCheckpoints(List<Checkpoint> checkpoints) {
+        this.checkpoints = checkpoints;
     }
 }

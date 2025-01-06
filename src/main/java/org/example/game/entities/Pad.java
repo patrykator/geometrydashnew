@@ -3,43 +3,59 @@ package org.example.game.entities;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import org.example.game.ui.PlayerPanel;
+import org.example.game.utilities.Activatable;
+import org.example.game.utilities.GameObject;
 
-public class Pad {
-    private final int x;
-    private final int y;
+import java.awt.*;
+
+public class Pad extends GameObject implements Activatable {
     private final String color;
     private String direction;
     private String position;
     private long lastActivatedTime;
     private static final long COOLDOWN_TIME = 200;
 
-
     @JsonCreator
     public Pad(@JsonProperty("x") int x, @JsonProperty("y") int y, @JsonProperty("color") String color,
                @JsonProperty("position") String position, @JsonProperty("direction") String direction) {
-        this.x = x;
-        this.y = y;
+        super(x, y);
         this.color = color;
         this.position = position;
         this.direction = direction;
         this.lastActivatedTime = 0;
     }
 
-    public int getX() {
-        return x;
-    }
+    @Override
+    public void draw(Graphics2D g2d, PlayerPanel playerPanel) {
+        int x = this.getX() * 50;
+        int y = this.getY() * 50;
+        String padKey = this.getColor().toLowerCase();
 
-    public int getY() {
-        return y;
+        var padImages = playerPanel.getPadImages();
+
+        Image padImage = padImages.get(padKey);
+        if (padImage != null) {
+            if ("bottom".equals(this.getPosition())) {
+                g2d.drawImage(padImage, x, y + 20, 50, -20, null);
+            } else {
+                g2d.drawImage(padImage, x, y + 30, 50, 20, null);
+            }
+        } else {
+            g2d.setColor(Color.MAGENTA);
+            g2d.fillRect(x + 12, y + 14, 36, 36);
+        }
+
+        if (playerPanel.isShowHitboxes()) {
+            g2d.setColor(Color.RED);
+            g2d.drawRect(x, y, 50, 50);
+        }
     }
 
     public String getColor() {
         return color;
     }
 
-    public String getDirection() {
-        return direction;
-    }
 
     public String getPosition() {
         return position;
@@ -55,6 +71,7 @@ public class Pad {
         this.position = position;
     }
 
+    @Override
     public void activate(Player player) {
         if (isCooldownActive()) {
             return;
@@ -83,14 +100,27 @@ public class Pad {
 
     private void handleYellowPurpleRedPads(Player player) {
         double velocityY = calculateVelocity(player);
-        player.setVelocityY(player.isGravityReversed() ? velocityY : -velocityY);
 
         if (player.isShipMode() || player.isUfoMode()) {
             player.setOrbEffectActive(true);
             player.setOrbEffectDuration(calculateEffectDuration(player));
         } else {
+            if (color.equals("red")) {
+                velocityY = 20;
+                player.setOrbEffectDuration(4);
+            }
             player.setJumping(true);
         }
+
+        player.setVelocityY(player.isGravityReversed() ? velocityY : -velocityY);
+        lastActivatedTime = System.currentTimeMillis();
+    }
+
+    private void handleSpiderPad(Player player) {
+        player.setGravityReversed(!player.isGravityReversed());
+        player.setSpiderOrbActivated(true);
+        player.setTeleportPad(true);
+        lastActivatedTime = System.currentTimeMillis();
     }
 
     private double calculateVelocity(Player player) {
@@ -123,9 +153,9 @@ public class Pad {
         lastActivatedTime = System.currentTimeMillis();
     }
 
-    private void handleSpiderPad(Player player) {
-        player.setGravityReversed("up".equals(direction));
-        player.setTeleportPad(true);
-        player.setSpiderOrbActivated(true);
+
+    @Override
+    public void update() {
+
     }
 }

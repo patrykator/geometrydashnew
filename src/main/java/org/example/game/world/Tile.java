@@ -1,38 +1,45 @@
 package org.example.game.world;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.example.game.ui.PlayerPanel;
+import org.example.game.utilities.GameObject;
 
-public class Tile {
-    private int x;
-    private int y;
+import java.awt.*;
+
+public class Tile extends GameObject {
     private final boolean isSolid;
-
 
     @JsonCreator
     public Tile(@JsonProperty("x") int x, @JsonProperty("y") int y, @JsonProperty("isSolid") boolean isSolid) {
-        this.x = x;
-        this.y = y;
+        super(x, y);
         this.isSolid = isSolid;
     }
 
-    public int getX() {
-        return x;
-    }
+    @Override
+    public void draw(Graphics2D g2d, PlayerPanel playerPanel) {
+        Rectangle tileBounds = new Rectangle(this.getX() * 50, this.getY() * 50, 50, 50);
 
-    public void setX(int x) {
-        this.x = x;
-    }
+        if (playerPanel.getTileImage() != null) {
+            g2d.drawImage(playerPanel.getTileImage(), tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height, null);
+        } else {
+            g2d.setColor(Color.GREEN);
+            g2d.fillRect(tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height);
+        }
 
-    public int getY() {
-        return y;
-    }
-
-    public void setY(int y) {
-        this.y = y;
+        if (playerPanel.isShowHitboxes()) {
+            g2d.setColor(Color.RED);
+            g2d.drawRect(tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height);
+        }
     }
 
     @JsonProperty("isSolid")
-    public boolean isSolid() { // Getter remains isSolid()
+    public boolean isSolid() {
         return isSolid;
+    }
+
+    @Override
+    public void update() {
+
     }
 }

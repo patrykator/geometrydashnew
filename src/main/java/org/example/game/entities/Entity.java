@@ -1,15 +1,10 @@
 package org.example.game.entities;
 
 public class Entity {
-    private String name;
+    private final String name;
     protected double x;
     protected double y;
 
-
-    public Entity(int x, int y) {
-        this.x = x;
-        this.y = y;
-    }
 
     public Entity(String name) {
         this.name = name;

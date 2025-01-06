@@ -1,6 +1,13 @@
 package org.example.game.entities;
 
-public class Player extends Entity {
+import org.example.game.ui.MainWindow;
+import org.example.game.ui.PlayerPanel;
+import org.example.game.utilities.Drawable;
+
+import java.awt.*;
+import java.awt.geom.AffineTransform;
+
+public class Player extends Entity implements Drawable {
     private boolean isJumping;
     private double rotationAngle;
     private int orbEffectDuration = 0;
@@ -10,7 +17,7 @@ public class Player extends Entity {
     private double x;
     private double y;
     private double velocityY;
-    private double playerSpeed = 5.0; // Zmień na double
+    private double playerSpeed = 5.0;
     private double targetOrbVelocity;
     private boolean spiderOrbJustActivated;
     private boolean robotFlipped = false;
@@ -23,6 +30,18 @@ public class Player extends Entity {
     private boolean isShipFlipped;
     private int orbEffectActiveDuration;
     private boolean isPlatformer = false;
+    private boolean dead;
+    private MainWindow mainWindow;
+    private Double checkpointX;
+    private Double checkpointY;
+
+    public boolean isDead() {
+        return !dead;
+    }
+
+    public void setDead(boolean dead) {
+        this.dead = dead;
+    }
 
     public Player(String name, int x, int y) {
         super(name);
@@ -33,8 +52,33 @@ public class Player extends Entity {
         this.y = y;
     }
 
+    public void setMainWindow(MainWindow mainWindow) {
+        this.mainWindow = mainWindow;
+    }
+
     public static void setStaticY(int y) {
         Player.staticY = y;
+    }
+
+    public Double getCheckpointX() {
+        return checkpointX;
+    }
+
+    public void setCheckpointX(double checkpointX) {
+        this.checkpointX = checkpointX;
+    }
+
+    public Double getCheckpointY() {
+        return checkpointY;
+    }
+
+    public void setCheckpointY(double checkpointY) {
+        this.checkpointY = checkpointY;
+    }
+
+    public void resetCheckpoint() {
+        this.checkpointX = null;
+        this.checkpointY = null;
     }
 
     public static int getStaticY() {
@@ -70,7 +114,7 @@ public class Player extends Entity {
         this.currentGameMode = gameMode;
     }
 
-    public synchronized GameMode getCurrentGameMode() { // metoda do pobierania trybu gracza
+    public synchronized GameMode getCurrentGameMode() {
         return this.currentGameMode;
     }
 
@@ -244,5 +288,115 @@ public class Player extends Entity {
 
     public boolean isTeleportPad() {
         return teleportPad;
+    }
+    @Override
+    public void draw(Graphics2D g2d, PlayerPanel playerPanel) {
+        if (this.isDead()) {
+            double x = (int) this.getX();
+            double y = (int) this.getY();
+
+            AffineTransform originalTransform = g2d.getTransform();
+
+            g2d.translate(x + 25, y + 25);
+
+            g2d.rotate(Math.toRadians(this.getRotationAngle()));
+
+            g2d.translate(-25, -25);
+
+            if (this.getCurrentGameMode() == GameMode.UFO) {
+                if (playerPanel.getUfoImage() != null) {
+                    if (this.isGravityReversed()) {
+                        g2d.drawImage(playerPanel.getUfoImage(), 0, 50, 50, -50, null);
+                    } else {
+                        g2d.drawImage(playerPanel.getUfoImage(), 0, 0, 50, 50, null);
+                    }
+                } else {
+                    g2d.setColor(Color.MAGENTA);
+                    g2d.fillRect(0, 0, 50, 50);
+                }
+            } else if (this.getCurrentGameMode() == GameMode.BALL) {
+                if (playerPanel.getBallModeImage() != null) {
+                    g2d.drawImage(playerPanel.getBallModeImage(), 0, 0, 50, 50, null);
+                } else {
+                    g2d.setColor(Color.YELLOW);
+                    g2d.fillOval(0, 0, 50, 50);
+                }
+            } else if (this.getCurrentGameMode() == GameMode.SHIP) {
+                if (this.isPlatformer() && playerPanel.getShipImagePlatformer() != null) {
+                    if (this.isShipFlipped() && this.isGravityReversed()) {
+                        g2d.drawImage(playerPanel.getShipImagePlatformer(), 50, 50, -50, -50, null);
+                    } else if (this.isShipFlipped()) {
+                        g2d.drawImage(playerPanel.getShipImagePlatformer(), 50, 0, -50, 50, null);
+                    } else if (this.isGravityReversed()) {
+                        g2d.drawImage(playerPanel.getShipImagePlatformer(), 0, 50, 50, -50, null);
+                    } else {
+                        g2d.drawImage(playerPanel.getShipImagePlatformer(), 0, 0, 50, 50, null);
+                    }
+                } else if (playerPanel.getShipImage() != null) {
+                    if (this.isGravityReversed()) {
+                        g2d.drawImage(playerPanel.getShipImage(), 0, 50, 50, -50, null);
+                    } else {
+                        g2d.drawImage(playerPanel.getShipImage(), 0, 0, 50, 50, null);
+                    }
+                } else {
+                    g2d.setColor(Color.BLUE);
+                    g2d.fillRect(0, 0, 50, 50);
+                }
+            } else if (this.getCurrentGameMode() == GameMode.WAVE) {
+                if (playerPanel.getWaveImage() != null) {
+                    g2d.drawImage(playerPanel.getWaveImage(), 0, 0, 50, 50, null);
+                } else {
+                    g2d.setColor(Color.CYAN);
+                    g2d.fillRect(0, 0, 50, 50);
+                }
+            } else if (this.getCurrentGameMode() == GameMode.ROBOT) {
+
+                if (this.isGravityReversed() && this.isRobotFlipped()) {
+                    g2d.drawImage(playerPanel.getRobotImage(), 50, 50, -50, -50, null);
+                } else if (this.isRobotFlipped()) {
+                    g2d.drawImage(playerPanel.getRobotImage(), 50, 0, -50, 50, null);
+                } else if (this.isGravityReversed()) {
+                    g2d.drawImage(playerPanel.getRobotImage(), 0, 50, 50, -50, null);
+                } else if (playerPanel.getRobotImage() != null) {
+                    g2d.drawImage(playerPanel.getRobotImage(), 0, 0, 50, 50, null);
+                } else {
+                    g2d.setColor(Color.PINK);
+                    g2d.fillRect(0, 0, 50, 50);
+                }
+            } else if (this.getCurrentGameMode() == GameMode.SPIDER) {
+                if (playerPanel.getSpiderImage() != null) {
+                    if (this.isGravityReversed()) {
+                        g2d.drawImage(playerPanel.getSpiderImage(), 0, 50, 50, -50, null);
+                    } else {
+                        g2d.drawImage(playerPanel.getSpiderImage(), 0, 0, 50, 50, null);
+                    }
+                } else {
+                    g2d.setColor(Color.ORANGE);
+                    g2d.fillRect(0, 0, 50, 50);
+                }
+            } else {
+                if (playerPanel.getPlayerImage() != null) {
+                    if (this.isPlatformer()) {
+                        g2d.drawImage(playerPanel.getPlayerImage(), 50, 0, -50, 50, null);
+                    } else {
+                        g2d.drawImage(playerPanel.getPlayerImage(), 0, 0, 50, 50, null);
+                    }
+                } else {
+                    g2d.setColor(Color.BLUE);
+                    g2d.fillRect(0, 0, 50, 50);
+                }
+            }
+
+            if (playerPanel.isShowHitboxes()) {
+                g2d.setColor(Color.RED);
+                g2d.drawRect(0, 0, 50, 50);
+            }
+
+            g2d.setTransform(originalTransform);
+
+            g2d.setColor(Color.BLACK);
+            g2d.setFont(new Font("Arial", Font.BOLD, 40));
+            g2d.drawString("Attempt " + mainWindow.getAttempts(), 100, 700);
+        }
     }
 }

@@ -7,6 +7,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.awt.geom.RoundRectangle2D;
+import java.util.Objects;
 
 public class ToolSelectionPanel extends JPanel {
     private final MainWindow mainWindow;
@@ -26,6 +27,9 @@ public class ToolSelectionPanel extends JPanel {
     private JCheckBox fullscreenCheckBox;
     private JComboBox<String> orbDirectionComboBox;
     private JComboBox<String> padPositionComboBox;
+    private static final int LEVEL_END_TOOL_INDEX = 12;
+    private JComboBox<String> spikePositionComboBox;
+    private final String[] spikePositions = {"top", "bottom"};
 
     private final String[] padPositions = {"top", "bottom"};
     private final String[] portalNames = {"Select", "Cube", "Ship", "Ball", "Ufo", "Wave", "Robot", "Spider"};
@@ -48,11 +52,12 @@ public class ToolSelectionPanel extends JPanel {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(5, 5, 5, 5);
 
+
         orbDirectionComboBoxY = 4;
 
         JLabel toolPanelLabel = createLabel("Tool:");
         add(toolPanelLabel, gbc);
-        String[] toolNames = {"None", "Tile", "Spike", "Orb", "Pad", "Portals", "Speed", "Delete"};
+        String[] toolNames = {"None", "Tile", "Spike", "Orb", "Pad", "Portals", "Speed", "Delete", "Checkpoint" , "Level End"};
         toolSelectionComboBox = createStyledComboBox(toolNames);
         toolSelectionComboBox.addItemListener(this::handleToolSelection);
         toolSelectionComboBox.setPreferredSize(new Dimension(defaultComboBoxWidth, toolSelectionComboBox.getPreferredSize().height));
@@ -112,6 +117,17 @@ public class ToolSelectionPanel extends JPanel {
         padSelectionComboBox = createStyledComboBox(padColors);
         padSelectionComboBox.addItemListener(this::handlePadSelection);
         padSelectionComboBox.setPreferredSize(new Dimension(defaultComboBoxWidth, padSelectionComboBox.getPreferredSize().height));
+
+        spikePositionComboBox = createStyledComboBox(spikePositions);
+        spikePositionComboBox.addItemListener(this::handleSpikePositionSelection);
+        spikePositionComboBox.setPreferredSize(new Dimension(defaultComboBoxWidth, spikePositionComboBox.getPreferredSize().height));
+
+        JButton setTargetButton = createStyledButton("Set Teleport Target");
+        setTargetButton.addActionListener(e -> {
+            if (Objects.equals(orbSelectionComboBox.getSelectedItem(), "Teleport")) {
+                JOptionPane.showMessageDialog(mainWindow, "Click on the screen to set the teleport target.");
+            }
+        });
     }
 
     private void createButtons(JPanel buttonPanel) {
@@ -184,7 +200,9 @@ public class ToolSelectionPanel extends JPanel {
     private void handleOrbDirectionSelection(ItemEvent e) {
         if (e.getStateChange() == ItemEvent.SELECTED) {
             String selectedOrbDirection = (String) orbDirectionComboBox.getSelectedItem();
-            mainWindow.getPlayerPanel().setSelectedOrbDirection(selectedOrbDirection);
+
+                mainWindow.getPlayerPanel().setSelectedOrbDirection(selectedOrbDirection);
+
         }
     }
 
@@ -199,6 +217,7 @@ public class ToolSelectionPanel extends JPanel {
                 break;
             case "Spike":
                 mainWindow.getPlayerPanel().setSelectedTool(2);
+                addSpikePositionComboBox();
                 break;
             case "Orb":
                 mainWindow.getPlayerPanel().setSelectedTool(3);
@@ -208,6 +227,9 @@ public class ToolSelectionPanel extends JPanel {
                 mainWindow.getPlayerPanel().setSelectedTool(4);
                 addPadSelectionComboBox();
                 addPadPositionComboBox();
+                break;
+            case "Checkpoint":
+                mainWindow.getPlayerPanel().setSelectedTool(5);
                 break;
             case "Portals":
                 mainWindow.getPlayerPanel().setSelectedTool(9);
@@ -219,7 +241,9 @@ public class ToolSelectionPanel extends JPanel {
                 break;
             case "Delete":
                 mainWindow.getPlayerPanel().setSelectedTool(11);
-                System.out.println("Selected tool set to 11 (Delete)");
+                break;
+            case "Level End":
+                mainWindow.getPlayerPanel().setSelectedTool(LEVEL_END_TOOL_INDEX);
                 break;
             case null:
                 break;
@@ -233,6 +257,31 @@ public class ToolSelectionPanel extends JPanel {
         repaint();
     }
 
+    private void addSpikePositionComboBox() {
+        if (spikePositionComboBox == null) {
+            spikePositionComboBox = createStyledComboBox(spikePositions);
+            spikePositionComboBox.addItemListener(this::handleSpikePositionSelection);
+            spikePositionComboBox.setPreferredSize(new Dimension(defaultComboBoxWidth, spikePositionComboBox.getPreferredSize().height));
+        }
+        if (isComponentOnPanel(spikePositionComboBox)) {
+            gbc.gridy = 3;
+            add(spikePositionComboBox, gbc);
+            revalidate();
+            repaint();
+        }
+    }
+
+    private void removeSpikePositionComboBox() {
+        removeComboBoxSafely(spikePositionComboBox);
+    }
+
+    private void handleSpikePositionSelection(ItemEvent e) {
+        if (e.getStateChange() == ItemEvent.SELECTED) {
+            String selectedSpikePosition = (String) spikePositionComboBox.getSelectedItem();
+            mainWindow.getPlayerPanel().setSelectedSpikePosition(selectedSpikePosition);
+        }
+    }
+
     private void removeOptionalComboBoxes() {
         removePortalSelectionComboBox();
         removeSpeedSelectionComboBox();
@@ -240,6 +289,7 @@ public class ToolSelectionPanel extends JPanel {
         removeOrbDirectionComboBox();
         removePadSelectionComboBox();
         removePadDirectionComboBox();
+        removeSpikePositionComboBox();
     }
 
     private void addPadPositionComboBox() {
@@ -413,6 +463,15 @@ public class ToolSelectionPanel extends JPanel {
     private void handleToolSelection(ItemEvent e) {
         if (e.getStateChange() == ItemEvent.SELECTED) {
             handleToolSelectionChange();
+            if (Objects.equals(toolSelectionComboBox.getSelectedItem(), "Orb")) {
+                addOrbSelectionComboBox();
+                if (orbSelectionComboBox.getSelectedItem() != null && orbSelectionComboBox.getSelectedItem().equals("Spider")) {
+                    addOrbDirectionComboBox();
+                }
+            } else {
+                removeOrbSelectionComboBox();
+                removeOrbDirectionComboBox();
+            }
         }
     }
 
@@ -434,7 +493,9 @@ public class ToolSelectionPanel extends JPanel {
             if (!"Select".equals(selectedOrbColor)) {
                 assert selectedOrbColor != null;
                 mainWindow.getPlayerPanel().setSelectedOrbColor(selectedOrbColor.toLowerCase());
-                if ("Spider".equals(selectedOrbColor)) {
+                if ("Teleport".equals(selectedOrbColor)) {
+                    addOrbDirectionComboBox();
+                } else if ("Spider".equals(selectedOrbColor)) {
                     addOrbDirectionComboBox();
                 } else {
                     removeOrbDirectionComboBox();

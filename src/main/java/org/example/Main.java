@@ -14,8 +14,8 @@ public class Main {
             int gameHeight = 900;
 
             Player player = MainWindow.createPlayer();
-
             MainWindow mainWindow = new MainWindow(player, new World());
+            player.setMainWindow(mainWindow);
 
             MainWindow.configureMainWindow(mainWindow, gameWidth, gameHeight);
             mainWindow.setVisible(false);

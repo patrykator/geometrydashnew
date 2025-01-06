@@ -8,7 +8,6 @@ import org.example.game.world.World;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.AffineTransform;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,10 +42,24 @@ public class PlayerPanel extends JPanel {
     private boolean showHitboxes = false;
     private boolean isPlatformer;
     private String selectedOrbDirection = "up";
-    private String selectedPadPosition = "bottom";
+    private String selectedPadPosition = "top";
     private final int MIN_BUILD_Y = -4450;
     private final int MAX_BUILD_Y = 4450;
     private final int MIN_BUILD_X = -200;
+    private int targetX = -1;
+    private int targetY = -1;
+    private boolean isSettingTeleportTarget = false;
+    private Orb selectedTeleportOrb = null;
+    private boolean showTeleportTarget = false;
+    private boolean drawPlayer = true;
+    private final Map<GameMode, Image> speedPortalImages = new HashMap<>();
+    private String selectedSpikePosition = "top";
+    private Image checkpointImage;
+    private Image activatedCheckpointImage;
+
+
+
+
 
     public PlayerPanel(Player player, World world, MainWindow mainWindow) {
         this.player = player;
@@ -92,6 +105,14 @@ public class PlayerPanel extends JPanel {
         });
     }
 
+    public void stopDrawingPlayer() {
+        drawPlayer = false;
+    }
+
+    public void resumeDrawingPlayer() {
+        drawPlayer = true;
+    }
+
     private void handleMouseDragged(MouseEvent e) {
         if (mainWindow.getInputHandler().isEditingMode()) {
             if (dragStartPoint != null) {
@@ -110,6 +131,9 @@ public class PlayerPanel extends JPanel {
     private void handleMouseMoved(MouseEvent e) {
         mouseX = e.getX();
         mouseY = e.getY();
+        if (mainWindow.getInputHandler().isEditingMode() && dragStartPoint == null) {
+            repaint();
+        }
     }
 
     private void handleMousePressed(MouseEvent e) {
@@ -130,108 +154,134 @@ public class PlayerPanel extends JPanel {
         if (mainWindow.getGameEngine().isRunning() && !mainWindow.getInputHandler().isEditingMode()) {
             return;
         }
+        if (!mainWindow.getInputHandler().isEditingMode()) {
+            return;
+        }
 
         int gridX = (e.getX() + cameraOffsetX) / 50;
         int gridY = (e.getY() + cameraOffsetY) / 50;
 
-        if (mainWindow.getInputHandler().isEditingMode()) {
-            switch (selectedTool) {
-                case 1:
-                    placeTile(gridX, gridY);
-                    break;
-                case 2:
-                    placeSpike(gridX, gridY);
-                    break;
-                case 3:
-                    placeOrb(gridX, gridY);
-                    break;
-                case 4:
-                    placePad(gridX, gridY, selectedOrbDirection);
-                    break;
-                case 9:
-                    placePortal(gridX, gridY, portalGameMode);
-                    break;
-                case 10:
-                    placeSpeedPortal(gridX, gridY, portalSpeedMultiplier);
-                    break;
-                case 11:
-                    deleteObject(gridX, gridY);
-                    break;
+        if (isSettingTeleportTarget) {
+            targetX = gridX * 50;
+            targetY = gridY * 50;
+
+            if (selectedTeleportOrb != null) {
+                setTeleportTargetForLastOrb(targetX, targetY);
+                showTeleportTarget = true;
+            }
+            isSettingTeleportTarget = false;
+            selectedTeleportOrb = null;
+            setCursor(Cursor.getDefaultCursor());
+            repaint();
+        } else {
+            Orb clickedOrb = null;
+            if (selectedTool == 3 && "teleport".equals(selectedOrbColor)) {
+                for (Orb orb : world.getOrbs()) {
+                    if (e.getX() + cameraOffsetX >= orb.getX() * 50 &&
+                            e.getX() + cameraOffsetX < (orb.getX() + 1) * 50 &&
+                            e.getY() + cameraOffsetY >= orb.getY() * 50 &&
+                            e.getY() + cameraOffsetY < (orb.getY() + 1) * 50) {
+                        clickedOrb = orb;
+                        break;
+                    }
+                }
+            }
+
+            if (clickedOrb != null) {
+                if (selectedTeleportOrb == clickedOrb) {
+                    showTeleportTarget = !showTeleportTarget;
+                } else {
+                    selectedTeleportOrb = clickedOrb;
+                    showTeleportTarget = true;
+                }
+                targetX = selectedTeleportOrb.getTeleportX() != null ? selectedTeleportOrb.getTeleportX() : -1;
+                targetY = selectedTeleportOrb.getTeleportY() != null ? selectedTeleportOrb.getTeleportY() : -1;
+                repaint();
+            } else {
+                showTeleportTarget = false;
+                selectedTeleportOrb = null;
+                switch (selectedTool) {
+                    case 1:
+                        placeTile(gridX, gridY);
+                        break;
+                    case 2:
+                        placeSpike(gridX, gridY);
+                        break;
+                    case 3:
+                        placeOrb(gridX, gridY);
+                        break;
+                    case 4:
+                        placePad(gridX, gridY, selectedOrbDirection);
+                        break;
+                    case 5:
+                        placeCheckpoint(gridX, gridY);
+                        break;
+                    case 9:
+                        placePortal(gridX, gridY, portalGameMode);
+                        break;
+                    case 10:
+                        placeSpeedPortal(gridX, gridY, portalSpeedMultiplier);
+                        break;
+                    case 11:
+                        deleteObject(gridX, gridY);
+                        break;
+                    case 12:
+                        placeLevelEnd(gridX, gridY);
+                        break;
+                }
             }
         }
     }
 
-    private void deleteObject(int gridX, int gridY) {
-        if (isWithinBuildLimits(gridX * 50, gridY * 50)) {
+    private void placeLevelEnd(int gridX, int gridY) {
+        if (mainWindow.getGameEngine().isGamePaused()) {
             return;
         }
 
-        System.out.println("Deleting object at gridX: " + gridX + ", gridY: " + gridY);
-        Tile tileToRemove = null;
-        for (Tile tile : world.getTiles()) {
-            if (tile.getX() == gridX && tile.getY() == gridY) {
-                tileToRemove = tile;
-                break;
-            }
-        }
-        if (tileToRemove != null) {
-            world.getTiles().remove(tileToRemove);
+        if (isWithinBuildLimits(gridX, gridY)) {
+            return;
         }
 
-        Spike spikeToRemove = null;
-        for (Spike spike : world.getSpikes()) {
-            if (spike.x() == gridX && spike.y() == gridY) {
-                spikeToRemove = spike;
-                break;
-            }
-        }
-        if (spikeToRemove != null) {
-            world.getSpikes().remove(spikeToRemove);
-        }
+        int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
-        Orb orbToRemove = null;
-        for (Orb orb : world.getOrbs()) {
-            if (orb.getX() == gridX && orb.getY() == gridY) {
-                orbToRemove = orb;
-                break;
-            }
-        }
-        if (orbToRemove != null) {
-            world.getOrbs().remove(orbToRemove);
-        }
+        world.getLevelEnds().removeIf(le -> le.getX() == adjustedGridX && le.getY() == adjustedGridY);
 
-        Pad padToRemove = null;
-        for (Pad pad : World.getPads()) {
-            if (pad.getX() == gridX && pad.getY() == gridY) {
-                padToRemove = pad;
-                break;
-            }
-        }
-        if (padToRemove != null) {
-            World.getPads().remove(padToRemove);
-        }
+        world.addLevelEnd(new LevelEnd(adjustedGridX, adjustedGridY));
 
-        Portal portalToRemove = null;
-        for (Portal portal : world.getPortals()) {
-            if (portal.getX() == gridX && portal.getY() == gridY) {
-                portalToRemove = portal;
-                break;
-            }
-        }
-        if (portalToRemove != null) {
-            world.getPortals().remove(portalToRemove);
-        }
+        repaint();
+    }
 
-        SpeedPortal speedPortalToRemove = null;
-        for (SpeedPortal speedPortal : world.getSpeedPortals()) {
-            if (speedPortal.getX() == gridX && speedPortal.getY() == gridY) {
-                speedPortalToRemove = speedPortal;
-                break;
-            }
+
+
+    private void setTeleportTargetForLastOrb(int x, int y) {
+        if (selectedTeleportOrb != null) {
+            selectedTeleportOrb.setTeleportX(x);
+            selectedTeleportOrb.setTeleportY(y);
         }
-        if (speedPortalToRemove != null) {
-            world.getSpeedPortals().remove(speedPortalToRemove);
-        }
+    }
+
+    private void deleteObject(int gridX, int gridY) {
+
+        int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
+
+
+        world.getTiles().removeIf(tile -> tile.getX() == adjustedGridX && tile.getY() == adjustedGridY);
+
+        world.getSpikes().removeIf(spike -> spike.x() == adjustedGridX && spike.y() == adjustedGridY);
+
+        world.getOrbs().removeIf(orb -> orb.getX() == adjustedGridX && orb.getY() == adjustedGridY);
+
+        World.getPads().removeIf(pad -> pad.getX() == adjustedGridX && pad.getY() == adjustedGridY);
+
+        world.getPortals().removeIf(portal -> portal.getX() == adjustedGridX && portal.getY() == adjustedGridY);
+
+        world.getSpeedPortals().removeIf(speedPortal -> speedPortal.getX() == adjustedGridX && speedPortal.getY() == adjustedGridY);
+
+        world.getLevelEnds().removeIf(levelEnd -> levelEnd.getX() == adjustedGridX && levelEnd.getY() == adjustedGridY);
+
+        world.getCheckpoints().removeIf(checkpoint -> checkpoint.getX() == adjustedGridX && checkpoint.getY() == adjustedGridY);
 
         repaint();
     }
@@ -346,6 +396,17 @@ public class PlayerPanel extends JPanel {
             repaint();
         });
 
+        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/Checkpoint.png", img -> {
+            checkpointImage = img;
+            repaint();
+        });
+
+        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/Checkpoint_Activated.png", img -> {
+            activatedCheckpointImage = img;
+            repaint();
+        });
+
+
         ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_cube.png", img -> portalImages.put(GameMode.CUBE, img));
         ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_ship.png", img -> portalImages.put(GameMode.SHIP, img));
         ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_ball.png", img -> portalImages.put(GameMode.BALL, img));
@@ -354,17 +415,28 @@ public class PlayerPanel extends JPanel {
         ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_robot.png", img -> portalImages.put(GameMode.ROBOT, img));
         ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_spider.png", img -> portalImages.put(GameMode.SPIDER, img));
 
-        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_slow.png", img -> portalImages.put(GameMode.SLOW, img));
-        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_normal.png", img -> portalImages.put(GameMode.NORMAL, img));
-        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_fast.png", img -> portalImages.put(GameMode.FAST, img));
-        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_very_fast.png", img -> portalImages.put(GameMode.VERY_FAST, img));
-        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_extremely_fast.png", img -> portalImages.put(GameMode.EXTREMELY_FAST, img));
+        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_slow.png", img -> speedPortalImages.put(GameMode.SLOW, img));
+        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_normal.png", img -> speedPortalImages.put(GameMode.NORMAL, img));
+        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_fast.png", img -> speedPortalImages.put(GameMode.FAST, img));
+        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_very_fast.png", img -> speedPortalImages.put(GameMode.VERY_FAST, img));
+        ImageLoader.loadImageAsync("src/main/java/org/example/game/img/portal_extremely_fast.png", img -> speedPortalImages.put(GameMode.EXTREMELY_FAST, img));
 
         loadEntityImages("Orb", orbImages, "Yellow", "Purple", "Red", "Blue", "Green", "Black", "Spider_Up", "Spider_Down", "Teleport");
         loadEntityImages("Pad", padImages, "Yellow", "Purple", "Red", "Blue", "Spider");
     }
 
+    public Image getCheckpointImage() {
+        return checkpointImage;
+    }
 
+    public Image getActivatedCheckpointImage() {
+        return activatedCheckpointImage;
+    }
+
+
+    public Image getTileImage() {
+        return tileImage;
+    }
 
     public Image getPlayerImage() {
         return playerImage;
@@ -372,6 +444,10 @@ public class PlayerPanel extends JPanel {
 
     public Image getShipImage() {
         return shipImage;
+    }
+
+    public Image getShipImagePlatformer() {
+        return shipImagePlatformer;
     }
 
     public Image getBallModeImage() {
@@ -392,6 +468,14 @@ public class PlayerPanel extends JPanel {
 
     public Image getSpiderImage() {
         return spiderImage;
+    }
+
+    public Image getSpikeImage() {
+        return spikeImage;
+    }
+
+    public Map<String, Image> getOrbImages() {
+        return orbImages;
     }
 
     private void loadEntityImages(String type, Map<String, Image> imageMap, String... keys) {
@@ -481,9 +565,13 @@ public class PlayerPanel extends JPanel {
                     return;
                 }
             }
-            world.addSpike(new Spike(adjustedGridX, adjustedGridY));
+            world.addSpike(new Spike(adjustedGridX, adjustedGridY, selectedSpikePosition));
             repaint();
         }
+    }
+
+    public void setSelectedSpikePosition(String selectedSpikePosition) {
+        this.selectedSpikePosition = selectedSpikePosition;
     }
 
     private void placeOrb(int gridX, int gridY) {
@@ -500,15 +588,29 @@ public class PlayerPanel extends JPanel {
         int mouseY = this.mouseY;
         int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
+        Orb existingOrb = null;
         for (Orb orb : world.getOrbs()) {
             if (orb.getX() == adjustedGridX && orb.getY() == adjustedGridY) {
-                world.getOrbs().remove(orb);
-                repaint();
-                return;
+                existingOrb = orb;
+                break;
             }
         }
+
+        if (existingOrb != null) {
+            world.getOrbs().remove(existingOrb);
+        }
+
         if ("spider".equals(selectedOrbColor)) {
-            world.addOrb(new Orb(adjustedGridX, gridY, selectedOrbColor, selectedOrbDirection));
+            world.addOrb(new Orb(adjustedGridX, adjustedGridY, selectedOrbColor, selectedOrbDirection));
+        } else if ("teleport".equals(selectedOrbColor)) {
+            Orb newOrb = new Orb(adjustedGridX, adjustedGridY, selectedOrbColor, selectedOrbDirection);
+            world.addOrb(newOrb);
+            isSettingTeleportTarget = true;
+            showTeleportTarget = false;
+            selectedTeleportOrb = newOrb;
+            targetX = -1;
+            targetY = -1;
+            setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
         } else {
             world.addOrb(new Orb(adjustedGridX, adjustedGridY, selectedOrbColor));
         }
@@ -570,7 +672,6 @@ public class PlayerPanel extends JPanel {
     }
 
     private void placeSpeedPortal(int gridX, int gridY, double speedMultiplier) {
-        System.out.println("placeSpeedPortal() called");
         if (mainWindow.getGameEngine().isGamePaused()) {
             return;
         }
@@ -601,7 +702,6 @@ public class PlayerPanel extends JPanel {
 
         Graphics2D g2d = (Graphics2D) g.create();
 
-
         g2d.setColor(new Color(173, 216, 230));
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
@@ -610,13 +710,47 @@ public class PlayerPanel extends JPanel {
         if (mainWindow.getInputHandler().isEditingMode()) {
             drawGrid(g2d);
             drawBuildLimitLines(g2d);
+            if (!isSettingTeleportTarget && isDraggingCamera()) {
+                highlightGridSquare(g2d);
+            }
         }
 
-        if (!mainWindow.isAnimatingDeath()) {
-            drawPlayer(g2d);
+        if (drawPlayer) {
+            player.draw(g2d, this);
         }
 
-        drawWorld(g2d);
+        for (Tile tile : world.getTiles()) {
+            tile.draw(g2d, this);
+        }
+        for (Spike spike : world.getSpikes()) {
+            spike.draw(g2d, this);
+        }
+        for (Orb orb : world.getOrbs()) {
+            orb.draw(g2d, this);
+        }
+        for (Pad pad : World.getPads()) {
+            pad.draw(g2d, this);
+        }
+        for (Portal portal : world.getPortals()) {
+            portal.draw(g2d, this);
+        }
+        for (SpeedPortal speedPortal : world.getSpeedPortals()) {
+            speedPortal.draw(g2d, this);
+        }
+        for (LevelEnd levelEnd : world.getLevelEnds()) {
+            levelEnd.draw(g2d, this);
+        }
+
+        for (Checkpoint checkpoint : world.getCheckpoints()) {
+            checkpoint.draw(g2d, this);
+        }
+
+        if (!player.isPlatformer()) {
+            drawLevelEnd(g2d);
+        }
+
+
+
 
         if (mainWindow.isAnimatingDeath() && mainWindow.fragmentAnimation != null) {
             mainWindow.fragmentAnimation.draw(g2d);
@@ -630,6 +764,78 @@ public class PlayerPanel extends JPanel {
             g2d.fillRect(0, 0, getWidth(), getHeight());
             g2d.dispose();
         }
+
+        if (mainWindow.getInputHandler().isEditingMode() && showTeleportTarget && selectedTeleportOrb != null && targetX != -1 && targetY != -1) {
+            g2d = (Graphics2D) g.create();
+            g2d.translate(-cameraOffsetX, -cameraOffsetY);
+            g2d.setColor(Color.RED);
+            g2d.fillRect(targetX, targetY, 50, 50);
+
+            g2d.setStroke(new BasicStroke(2));
+            g2d.drawLine(selectedTeleportOrb.getX() * 50 + 25, selectedTeleportOrb.getY() * 50 + 25, targetX + 25, targetY + 25);
+
+            g2d.dispose();
+        }
+    }
+
+    private void drawLevelEnd(Graphics2D g2d) {
+        if ( !getPlayer().isPlatformer() && !getMainWindow().getInputHandler().isEditingMode() ) {
+            double endX = getMainWindow().getGameEngine().getLevelEndX();
+
+            int x = (int) (endX);
+
+
+            g2d.setColor(Color.GREEN);
+            g2d.setStroke(new BasicStroke(3));
+
+            g2d.drawLine(x, -10000, x, 10000);
+        }
+    }
+
+
+    private boolean isDraggingCamera() {
+        return dragStartPoint == null;
+    }
+
+    private void highlightGridSquare(Graphics2D g2d) {
+        int gridX = (mouseX + cameraOffsetX) / 50;
+        int gridY = (mouseY + cameraOffsetY) / 50;
+
+        int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
+
+        g2d.setColor(new Color(255, 0, 0, 100));
+        g2d.fillRect(adjustedGridX * 50, adjustedGridY * 50, 50, 50);
+    }
+
+    private void placeCheckpoint(int gridX, int gridY) {
+        if (mainWindow.getGameEngine().isGamePaused()) {
+            return;
+        }
+
+        if (isWithinBuildLimits(gridX, gridY)) {
+            return;
+        }
+
+        int adjustedGridX = adjustGridX(gridX, mouseX, cameraOffsetX);
+        int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
+
+        Checkpoint existingCheckpoint = null;
+        for (Checkpoint checkpoint : world.getCheckpoints()) {
+            if (checkpoint.getX() == adjustedGridX && checkpoint.getY() == adjustedGridY) {
+                existingCheckpoint = checkpoint;
+                break;
+            }
+        }
+
+        if (existingCheckpoint != null) {
+            world.getCheckpoints().remove(existingCheckpoint);
+        } else {
+            Checkpoint newCheckpoint = new Checkpoint(adjustedGridX, adjustedGridY);
+            world.addCheckpoint(newCheckpoint);
+        }
+
+        repaint();
     }
 
     public String getToolName() {
@@ -639,9 +845,11 @@ public class PlayerPanel extends JPanel {
             case 2 -> "Spike";
             case 3 -> "Orb";
             case 4 -> "Pad";
+            case 5 -> "Checkpoint";
             case 9 -> "Portal";
             case 10 -> "Speed Portal";
             case 11 -> "Delete";
+            case 12 -> "Level End";
             default -> "Unknown";
         };
     }
@@ -658,114 +866,7 @@ public class PlayerPanel extends JPanel {
         g2d.drawLine(lineX, MIN_BUILD_Y, getWidth() + cameraOffsetX, MIN_BUILD_Y);
         g2d.drawLine(lineX, MAX_BUILD_Y, getWidth() + cameraOffsetX, MAX_BUILD_Y);
 
-        System.out.println("lineX: " + lineX + ", maxY: " + maxY);
     }
-
-    private void drawPlayer(Graphics2D g2d) {
-        if (player == null) return;
-
-        double x = (int) player.getX();
-        double y = (int) player.getY();
-
-        AffineTransform originalTransform = g2d.getTransform();
-
-        g2d.translate(x + 25, y + 25);
-
-        g2d.rotate(Math.toRadians(player.getRotationAngle()));
-
-        g2d.translate(-25, -25);
-
-        if (player.getCurrentGameMode() == GameMode.UFO) {
-            if (ufoImage != null) {
-                if (player.isGravityReversed()) {
-                    g2d.drawImage(ufoImage, 0, 50, 50, -50, null);
-                } else {
-                    g2d.drawImage(ufoImage, 0, 0, 50, 50, null);
-                }
-            } else {
-                g2d.setColor(Color.MAGENTA);
-                g2d.fillRect(0, 0, 50, 50);
-            }
-        } else if (player.getCurrentGameMode() == GameMode.BALL) {
-            if (ballModeImage != null) {
-                g2d.drawImage(ballModeImage, 0, 0, 50, 50, null);
-            } else {
-                g2d.setColor(Color.YELLOW);
-                g2d.fillOval(0, 0, 50, 50);
-            }
-        } else if (player.getCurrentGameMode() == GameMode.SHIP) {
-            if (player.isPlatformer() && shipImagePlatformer != null) {
-                if (player.isShipFlipped() && player.isGravityReversed()) {
-                    g2d.drawImage(shipImagePlatformer, 50, 50, -50, -50, null);
-                } else if (player.isShipFlipped()) {
-                    g2d.drawImage(shipImagePlatformer, 50, 0, -50, 50, null);
-                } else if (player.isGravityReversed()) {
-                    g2d.drawImage(shipImagePlatformer, 0, 50, 50, -50, null);
-                } else {
-                    g2d.drawImage(shipImagePlatformer, 0, 0, 50, 50, null);
-                }
-            } else if (shipImage != null) {
-                if (player.isGravityReversed()) {
-                    g2d.drawImage(shipImage, 0, 50, 50, -50, null);
-                } else {
-                    g2d.drawImage(shipImage, 0, 0, 50, 50, null);
-                }
-            } else {
-                g2d.setColor(Color.BLUE);
-                g2d.fillRect(0, 0, 50, 50);
-            }
-        } else if (player.getCurrentGameMode() == GameMode.WAVE) {
-            if (waveImage != null) {
-                g2d.drawImage(waveImage, 0, 0, 50, 50, null);
-            } else {
-                g2d.setColor(Color.CYAN);
-                g2d.fillRect(0, 0, 50, 50);
-            }
-        } else if (player.getCurrentGameMode() == GameMode.ROBOT) {
-
-            if (player.isGravityReversed() && player.isRobotFlipped()) {
-                g2d.drawImage(robotImage, 50, 50, -50, -50, null);
-            } else if (player.isRobotFlipped()) {
-                g2d.drawImage(robotImage, 50, 0, -50, 50, null);
-            } else if (player.isGravityReversed()) {
-                g2d.drawImage(robotImage, 0, 50, 50, -50, null);
-            } else if (robotImage != null) {
-                g2d.drawImage(robotImage, 0, 0, 50, 50, null);
-            } else {
-                g2d.setColor(Color.PINK);
-                g2d.fillRect(0, 0, 50, 50);
-            }
-        } else if (player.getCurrentGameMode() == GameMode.SPIDER) {
-            if (spiderImage != null) {
-                if (player.isGravityReversed()) {
-                    g2d.drawImage(spiderImage, 0, 50, 50, -50, null);
-                } else {
-                    g2d.drawImage(spiderImage, 0, 0, 50, 50, null);
-                }
-            } else {
-                g2d.setColor(Color.ORANGE);
-                g2d.fillRect(0, 0, 50, 50);
-            }
-        } else {
-            if (playerImage != null) {
-                if (player.isPlatformer()) {
-                    g2d.drawImage(playerImage, 50, 0, -50, 50, null);
-                } else {
-                    g2d.drawImage(playerImage, 0, 0, 50, 50, null);
-                }
-            } else {
-                g2d.setColor(Color.BLUE);
-                g2d.fillRect(0, 0, 50, 50);
-            }
-        }
-
-        g2d.setTransform(originalTransform);
-
-        g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("Arial", Font.BOLD, 20));
-        g2d.drawString("Attempt " + mainWindow.getAttempts(), 10, 20);
-    }
-
     private void drawGrid(Graphics2D g2d) {
         g2d.setColor(Color.GRAY);
         int panelWidth = getWidth() * 5;
@@ -785,160 +886,6 @@ public class PlayerPanel extends JPanel {
             g2d.drawLine(cameraOffsetX, y, panelWidth + cameraOffsetX, y);
         }
     }
-
-    private void drawWorld(Graphics2D g2d) {
-        Rectangle cameraBounds = new Rectangle(cameraOffsetX, cameraOffsetY, getWidth(), getHeight());
-
-        for (Tile tile : world.getTiles()) drawTile(g2d, tile, cameraBounds);
-        for (Spike spike : world.getSpikes()) drawSpike(g2d, spike);
-        for (Orb orb : world.getOrbs()) drawOrb(g2d, orb);
-        for (Pad pad : World.getPads()) drawPad(g2d, pad);
-        for (Portal portal : world.getPortals()) drawPortal(g2d, portal);
-        for (SpeedPortal speedPortal : world.getSpeedPortals()) drawSpeedPortal(g2d, speedPortal);
-    }
-
-    private void drawPortal(Graphics2D g2d, Portal portal) {
-        double x = portal.getX() * 50;
-        double y = portal.getY() * 50;
-
-        Image portalImage = portalImages.get(portal.getTargetGameMode());
-        if (portalImage != null) {
-            g2d.drawImage(portalImage, (int)x, (int)y, 50, 100, null);
-        } else {
-            switch (portal.getTargetGameMode()) {
-                case CUBE:
-                    g2d.setColor(Color.GREEN);
-                    break;
-                case SHIP:
-                    g2d.setColor(Color.BLUE);
-                    break;
-                case BALL:
-                    g2d.setColor(Color.YELLOW);
-                    break;
-                case UFO:
-                    g2d.setColor(Color.MAGENTA);
-                    break;
-                case WAVE:
-                    g2d.setColor(Color.CYAN);
-                    break;
-                case ROBOT:
-                    g2d.setColor(Color.PINK);
-                    break;
-                case SPIDER:
-                    g2d.setColor(Color.ORANGE);
-                    break;
-                default:
-                    g2d.setColor(Color.GRAY);
-            }
-            g2d.fillRect((int)x, (int)y, 50, 100);
-        }
-    }
-
-    private void drawSpeedPortal(Graphics2D g2d, SpeedPortal speedPortal) {
-        double x = speedPortal.getX() * 50;
-        double y = speedPortal.getY() * 50;
-
-        double speedMultiplier = speedPortal.getSpeedMultiplier();
-
-        Image portalImage = null;
-        if (speedMultiplier == 0.807) {
-            portalImage = portalImages.get(GameMode.SLOW);
-        } else if (speedMultiplier == 1.0) {
-            portalImage = portalImages.get(GameMode.NORMAL);
-        } else if (speedMultiplier == 1.243) {
-            portalImage = portalImages.get(GameMode.FAST);
-        } else if (speedMultiplier == 1.502) {
-            portalImage = portalImages.get(GameMode.VERY_FAST);
-        } else if (speedMultiplier == 1.849) {
-            portalImage = portalImages.get(GameMode.EXTREMELY_FAST);
-        }
-
-        if (portalImage != null) {
-            g2d.drawImage(portalImage, (int)x, (int)y, 50, 100, null);
-        } else {
-            g2d.setColor(Color.DARK_GRAY);
-            g2d.fillRect((int)x, (int)y, 50, 100);
-        }
-    }
-
-    private void drawTile(Graphics2D g2d, Tile tile, Rectangle cameraBounds) {
-        Rectangle tileBounds = new Rectangle(tile.getX() * 50, tile.getY() * 50, 50, 50);
-        if (!cameraBounds.intersects(tileBounds)) return;
-
-        if (tileImage != null) {
-            g2d.drawImage(tileImage, tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height, null);
-        } else {
-            g2d.setColor(Color.GREEN);
-            g2d.fillRect(tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height);
-        }
-
-        if (showHitboxes) {
-            g2d.setColor(Color.RED);
-            g2d.drawRect(tileBounds.x, tileBounds.y, tileBounds.width, tileBounds.height);
-        }
-    }
-
-    private void drawSpike(Graphics2D g2d, Spike spike) {
-        int x = spike.x() * 50;
-        int y = spike.y() * 50;
-
-        if (spikeImage != null) {
-            g2d.drawImage(spikeImage, x, y, 50, 50, null);
-        } else {
-            g2d.setColor(Color.RED);
-            g2d.fillRect(x, y, 50, 50);
-        }
-
-        if (showHitboxes) {
-            g2d.setColor(Color.GREEN);
-            g2d.drawPolygon(new int[]{x, x + 25, x + 50}, new int[]{y + 50, y, y + 50}, 3);
-            g2d.setColor(Color.RED);
-            g2d.drawRect(x + 19, y + 15, 12, 20);
-        }
-
-    }
-    private void drawOrb(Graphics2D g2d, Orb orb) {
-        int x = orb.getX() * 50;
-        int y = orb.getY() * 50;
-        String orbKey = orb.getColor().toLowerCase();
-        if ("spider".equals(orb.getColor())) orbKey += "_" + orb.getDirection();
-
-        Image orbImage = orbImages.get(orbKey);
-        if (orbImage != null) {
-            g2d.drawImage(orbImage, x + 7, y + 7, 36, 36, null);
-        } else {
-            g2d.setColor(Color.YELLOW);
-            g2d.fillOval(x + 12, y + 12, 36, 36);
-        }
-
-        if (showHitboxes) {
-            g2d.setColor(Color.RED);
-            g2d.drawRect(x, y, 50, 50);
-        }
-    }
-    private void drawPad(Graphics2D g2d, Pad pad) {
-        int x = pad.getX() * 50;
-        int y = pad.getY() * 50;
-        String padKey = pad.getColor().toLowerCase();
-
-        Image padImage = padImages.get(padKey);
-        if (padImage != null) {
-            if ("bottom".equals(pad.getPosition())) {
-                g2d.drawImage(padImage, x, y + 20, 50, -20, null);
-            } else {
-                g2d.drawImage(padImage, x, y + 30, 50, 20, null);
-            }
-        } else {
-            g2d.setColor(Color.MAGENTA);
-            g2d.fillRect(x + 12, y + 14, 36, 36);
-        }
-
-        if (showHitboxes) {
-            g2d.setColor(Color.RED);
-            g2d.drawRect(x, y, 50, 50);
-        }
-    }
-
     public int getCameraOffsetY() {
         return cameraOffsetY;
     }
@@ -977,10 +924,9 @@ public class PlayerPanel extends JPanel {
     }
 
     public boolean isCollision(double x, double y) {
-
         for (Tile tile : world.getTiles()) {
-            if (tile.isSolid() && x < tile.getX() * 50 + 50 && x + 50 > tile.getX() * 50 &&
-                    y < tile.getY() * 50 + 50 && y + 50 > tile.getY() * 50) {
+            if (tile.isSolid() &&  x < tile.getX() * 50 + 50 &&  x + 50 > tile.getX() * 50 &&
+                     y < tile.getY() * 50 + 50 &&  y + 50 > tile.getY() * 50) {
                 return true;
             }
         }
@@ -1037,5 +983,26 @@ public class PlayerPanel extends JPanel {
             }
         }
         return null;
+    }
+
+
+    public boolean isShowHitboxes() {
+        return showHitboxes;
+    }
+
+    public Map<String, Image> getPadImages() {
+        return padImages;
+    }
+
+    public Map<GameMode, Image> getPortalImages() {
+        return portalImages;
+    }
+
+    public Map<GameMode, Image> getSpeedPortalImages() {
+        return speedPortalImages;
+    }
+
+    public MainWindow getMainWindow() {
+        return mainWindow;
     }
 }

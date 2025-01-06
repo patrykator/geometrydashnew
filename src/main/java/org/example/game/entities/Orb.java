@@ -3,49 +3,41 @@ package org.example.game.entities;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import org.example.game.ui.PlayerPanel;
+import org.example.game.utilities.Activatable;
+import org.example.game.utilities.GameObject;
 
-public class Orb {
-    private final int x;
-    private final int y;
+import java.awt.*;
+
+public class Orb extends GameObject implements Activatable {
     private final String color;
     private String direction;
     private Integer teleportX;
     private Integer teleportY;
 
-
     @JsonCreator
     public Orb(@JsonProperty("x") int x, @JsonProperty("y") int y, @JsonProperty("color") String color,
                @JsonProperty("direction") String direction, @JsonProperty("teleportX") Integer teleportX,
                @JsonProperty("teleportY") Integer teleportY) {
-        this.x = x;
-        this.y = y;
+        super(x, y);
         this.color = color;
         this.direction = direction;
         this.teleportX = teleportX;
         this.teleportY = teleportY;
+
     }
 
     public Orb(int x, int y, String color) {
-        this.x = x;
-        this.y = y;
+        super(x, y);
         this.color = color;
     }
 
     public Orb(int x, int y, String color, String direction) {
-        this.x = x;
-        this.y = y;
+        super(x, y);
         this.color = color;
         this.direction = direction;
         this.teleportX = null;
         this.teleportY = null;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getY() {
-        return y;
     }
 
     public String getColor() {
@@ -61,6 +53,7 @@ public class Orb {
         this.teleportY = teleportY;
     }
 
+    @Override
     public void activate(Player player) {
         switch (color) {
             case "yellow":
@@ -90,7 +83,6 @@ public class Orb {
             default:
                 throw new IllegalStateException("Nieznany kolor orba: " + color);
         }
-        System.out.println("Orb activated: " + color + ", Ship mode: " + player.isShipMode());
     }
 
     private void handleYellowOrb(Player player) {
@@ -133,7 +125,6 @@ public class Orb {
             player.setOrbEffectDuration(4);
         }
         player.setOrbEffectActive(true);
-        System.out.println("Czerwony orb, velocityY: " + player.getVelocityY());
         player.setJumping(true);
     }
 
@@ -189,9 +180,47 @@ public class Orb {
     }
 
     private void handleTeleportOrb(Player player) {
-        if (teleportX != null && teleportY != null) {
-            player.setX(teleportX);
-            player.setY(teleportY);
+        player.setX(teleportX);
+        player.setY(teleportY);
+    }
+
+    public Integer getTeleportX() {
+        return teleportX;
+    }
+
+    public void setTeleportX(Integer teleportX) {
+        this.teleportX = teleportX;
+    }
+
+    public Integer getTeleportY() {
+        return teleportY;
+    }
+
+    @Override
+    public void draw(Graphics2D g2d, PlayerPanel playerPanel) {
+        int x = this.getX() * 50;
+        int y = this.getY() * 50;
+        String orbKey = this.getColor().toLowerCase();
+        if ("spider".equals(this.getColor())) orbKey += "_" + this.getDirection();
+
+        var orbImages = playerPanel.getOrbImages();
+
+        Image orbImage = orbImages.get(orbKey);
+        if (orbImage != null) {
+            g2d.drawImage(orbImage, x + 7, y + 7, 36, 36, null);
+        } else {
+            g2d.setColor(Color.YELLOW);
+            g2d.fillOval(x + 12, y + 12, 36, 36);
         }
+
+        if (playerPanel.isShowHitboxes()) {
+            g2d.setColor(Color.RED);
+            g2d.drawRect(x, y, 50, 50);
+        }
+    }
+
+    @Override
+    public void update() {
+
     }
 }

@@ -13,6 +13,8 @@ public class World {
     private final List<Portal> portals;
     private final List<SpeedPortal> speedPortals = new ArrayList<>();
     private boolean isPlatformer;
+    private final List<LevelEnd> levelEnds;
+    private final List<Checkpoint> checkpoints;
 
 
 
@@ -24,6 +26,16 @@ public class World {
         pads = new ArrayList<>();
         portals = new ArrayList<>();
         isPlatformer = false;
+        levelEnds = new ArrayList<>();
+        checkpoints = new ArrayList<>();
+    }
+
+    public void addCheckpoint(Checkpoint checkpoint) {
+        checkpoints.add(checkpoint);
+    }
+
+    public List<Checkpoint> getCheckpoints() {
+        return checkpoints;
     }
 
     public List<Tile> getTiles() {
@@ -34,6 +46,16 @@ public class World {
         return portals;
     }
 
+    public void addLevelEnd(LevelEnd levelEnd) {
+        levelEnds.add(levelEnd);
+    }
+
+    public List<LevelEnd> getLevelEnds() {
+        return levelEnds;
+    }
+
+
+
     public void addSpeedPortal(SpeedPortal speedPortal) {
         speedPortals.add(speedPortal);
     }
@@ -43,7 +65,6 @@ public class World {
     }
 
     public void addPortal(Portal portal){
-        System.out.println("Adding portal: " + portal.getTargetGameMode() + " at " + portal.getX() + ", " + portal.getY()); // Debug
         portals.add(portal);
     }
 
@@ -92,7 +113,9 @@ public class World {
         levelData.setPads(pads);
         levelData.setPortals(this.portals);
         levelData.setSpeedPortals(this.speedPortals);
+        levelData.setLevelEnds(this.levelEnds);
         levelData.setPlatformer(this.isPlatformer);
+        levelData.setCheckpoints(this.checkpoints);
         return levelData;
     }
 
@@ -100,9 +123,10 @@ public class World {
         this.tiles.clear();
         this.spikes.clear();
         this.orbs.clear();
-        pads.clear(); // Dodane czyszczenie listy pads
+        pads.clear();
         portals.clear();
         speedPortals.clear();
+        this.checkpoints.clear();
 
         if(levelData == null) return;
 
@@ -116,6 +140,10 @@ public class World {
             this.orbs.addAll(levelData.getOrbs());
         }
 
+        if (levelData.getLevelEnds() != null) {
+            this.levelEnds.addAll(levelData.getLevelEnds());
+        }
+
         if(levelData.getPads() != null){
             pads.addAll(levelData.getPads());
         }
@@ -126,6 +154,10 @@ public class World {
 
         if (levelData.getSpeedPortals() != null) {
             this.speedPortals.addAll(levelData.getSpeedPortals());
+        }
+
+        if (levelData.getCheckpoints() != null) {
+            this.checkpoints.addAll(levelData.getCheckpoints());
         }
 
         this.isPlatformer = levelData.isPlatformer();

@@ -1,5 +1,8 @@
 package org.example.game.animations;
 
+import org.example.game.ui.PlayerPanel;
+import org.example.game.utilities.Drawable;
+
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -66,7 +69,7 @@ public class FragmentAnimation {
         return animationFinished;
     }
 
-    private static class Fragment {
+    private static class Fragment implements Drawable {
         private double x;
         private double y;
         private double vx;
@@ -119,6 +122,17 @@ public class FragmentAnimation {
 
         public boolean isFinished() {
             return finished;
+        }
+
+        @Override
+        public void draw(Graphics2D g2d, PlayerPanel playerPanel) {
+            if (!this.finished) {
+                AffineTransform oldTransform = g2d.getTransform();
+                g2d.translate(this.x, this.y);
+                g2d.rotate(this.rotation, this.image.getWidth() / 2.0, this.image.getHeight() / 2.0);
+                g2d.drawImage(this.image, -this.image.getWidth() / 2, -this.image.getHeight() / 2, null);
+                g2d.setTransform(oldTransform);
+            }
         }
     }
 }

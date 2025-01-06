@@ -49,13 +49,13 @@ public class MainWindow extends JFrame {
         setTitle("Main Window");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        setResizable(false);
     }
 
     private void initializePlayerPanel(Player player, World world) {
         playerPanel = new PlayerPanel(player, world, this);
         playerPanel.setVisible(false);
         add(playerPanel);
-        System.out.println("MainWindow - PlayerPanel hashcode: " + playerPanel.hashCode());
     }
 
     private void initializeInputHandler() {
@@ -139,7 +139,6 @@ public class MainWindow extends JFrame {
     }
 
     public void setInputHandler(InputHandler inputHandler) {
-        System.out.println("MainWindow.setInputHandler() called, new InputHandler: " + inputHandler);
         removeExistingInputHandler();
 
         this.inputHandler = inputHandler;
@@ -341,6 +340,8 @@ public class MainWindow extends JFrame {
     }
 
     public void die(Player player) {
+        getPlayerPanel().stopDrawingPlayer();
+       player.setDead(true);
         if (!isAnimatingDeath) {
             isAnimatingDeath = true;
             BufferedImage playerImage = getPlayerImage(player);
@@ -348,6 +349,8 @@ public class MainWindow extends JFrame {
             initiateDeathAnimationSequence(player);
         }
     }
+
+
 
     private BufferedImage getPlayerImage(Player player) {
         Image image = switch (player.getCurrentGameMode()) {
@@ -402,10 +405,18 @@ public class MainWindow extends JFrame {
 
     private void resetGameAfterDeath(Player player) {
         playerPanel.resetCameraPosition();
-        gameEngine.resetGameState();
+        if (player.getCheckpointX() != null && player.getCheckpointY() != null) {
+            player.setX(player.getCheckpointX() * 50);
+            player.setY(player.getCheckpointY() * 50);
+        } else {
+            gameEngine.resetGameState();
+        }
+        getPlayerPanel().resumeDrawingPlayer();
+        player.setDead(false);
         incrementAttempts();
         isAnimatingDeath = false;
         player.setCurrentGameMode(GameMode.CUBE);
+        player.setPlayerSpeed(player.getDefaultPlayerSpeed());
         repaint();
     }
 
@@ -426,5 +437,9 @@ public class MainWindow extends JFrame {
 
     public InputHandler getInputHandler() {
         return inputHandler;
+    }
+
+    public void resetAttempts() {
+        attempts = 1;
     }
 }

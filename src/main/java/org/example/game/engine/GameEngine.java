@@ -2,6 +2,7 @@ package org.example.game.engine;
 
 import org.example.game.entities.*;
 import org.example.game.ui.MainWindow;
+import org.example.game.utilities.Activatable;
 import org.example.game.world.Tile;
 import org.example.game.world.World;
 import org.example.game.ui.PlayerPanel;
@@ -20,10 +21,14 @@ public class GameEngine implements Runnable {
     private boolean robotBoostActive = false;
     private boolean spiderTeleportPerformed = false;
     private final InputHandler inputHandler;
-
     private boolean gamePaused = false;
     private final JButton resumeButton;
     private final JButton exitLevelButton;
+    private boolean levelEnded = false;
+    private long levelEndTime;
+    private static final long END_GAME_ANIMATION_DURATION = 1500;
+    private double levelEndX = 0;
+    private Thread gameThread;
 
 
 
@@ -51,9 +56,11 @@ public class GameEngine implements Runnable {
     }
 
     public void start() {
-        running = true;
-        Thread gameThread = new Thread(this);
-        gameThread.start();
+        if (!running) {
+            running = true;
+            gameThread = new Thread(this);
+            gameThread.start();
+        }
     }
 
     public void setMainWindow(MainWindow mainWindow) {
@@ -75,7 +82,9 @@ public class GameEngine implements Runnable {
             lastTime = now;
 
             while (delta >= 1) {
-                updateGameLogic();
+                if (!gamePaused && !levelEnded) {
+                    updateGameLogic();
+                }
                 delta--;
             }
 
@@ -86,9 +95,7 @@ public class GameEngine implements Runnable {
     public void pauseGame() {
         if (!gamePaused) {
             gamePaused = true;
-            running = false;
             mainWindow.getPlayerPanel().setDimmed(true);
-
 
             inputHandler.setEditingMode(false);
 
@@ -100,7 +107,6 @@ public class GameEngine implements Runnable {
     public void resumeGame() {
         if (gamePaused) {
             gamePaused = false;
-            running = true;
             mainWindow.getPlayerPanel().setDimmed(false);
             hidePauseButtons();
             inputHandler.setPlayer(mainWindow.getPlayerPanel().getPlayer());
@@ -108,8 +114,6 @@ public class GameEngine implements Runnable {
 
             inputHandler.setEditingMode(false);
 
-            Thread gameThread = new Thread(this);
-            gameThread.start();
             mainWindow.getPlayerPanel().addKeyListener(inputHandler);
             mainWindow.repaint();
         }
@@ -124,6 +128,9 @@ public class GameEngine implements Runnable {
         resetGameState();
         mainWindow.getPlayerPanel().setDimmed(false);
 
+        mainWindow.setPlayerPosition(player, mainWindow.getPlayerPanel().getHeight());
+        mainWindow.resetAttempts();
+
         setGamePaused(false);
 
         mainWindow.setVisible(false);
@@ -137,12 +144,29 @@ public class GameEngine implements Runnable {
         player.setRotationAngle(0);
         player.setGravityReversed(false);
         player.setSpiderOrbJustActivated(false);
+        player.resetCheckpoint();
+        setLevelEnded();
+        mainWindow.getPlayerPanel().resumeDrawingPlayer();
 
         player.setOrbEffectDuration(0);
         player.setOrbEffectActive(false);
         player.setShipFlipped(false);
+        inputHandler.getPressedKeys().clear();
         setCurrentGameMode(GameMode.CUBE);
+
+        for (Checkpoint checkpoint : mainWindow.getPlayerPanel().getWorld().getCheckpoints()) {
+            checkpoint.setActivated(false);
+        }
     }
+
+    private void setLevelEnded() {
+        levelEnded = false;
+        levelEndTime = 0;
+        levelEndX = 0;
+    }
+
+
+
 
     public void setGamePaused(boolean gamePaused) {
         this.gamePaused = gamePaused;
@@ -182,7 +206,6 @@ public class GameEngine implements Runnable {
         if (player.getOrbEffectDuration() > 0) {
             player.setOrbEffectDuration(player.getOrbEffectDuration() - 1);
         }
-
     }
 
     private void updateUfoVelocity() {
@@ -226,7 +249,6 @@ public class GameEngine implements Runnable {
 
         if (player.getOrbEffectDuration() > 0) {
             temporaryMaxFallSpeed = player.isGravityReversed() ? 20 : -20;
-            System.out.println("temporaryMaxFallSpeed" + temporaryMaxFallSpeed);
         }
 
         if (player.getVelocityY() > temporaryMaxFallSpeed) {
@@ -265,22 +287,166 @@ public class GameEngine implements Runnable {
         handleFragmentAnimation();
         handlePlayerOutOfBounds();
 
-        handleNonPlatformerMovement();
-        handlePlatformerMovement();
-
-        handlePortalCollisions();
-        handleSpeedPortalCollisions();
-        handlePlatformerShipAndRobotInput();
-
-        handleGameModeLogic(currentGameMode);
-
         checkPadActivation(mainWindow.getPlayerPanel());
 
         handleTeleportation();
         handleSpikeCollisions();
+        handleCheckpointCollisions();
 
         updatePlayerStaticPosition();
-        updateCameraPosition();
+
+        if (player.isDead()) {
+            updateCameraPosition();
+            handleNonPlatformerMovement();
+            handlePlatformerMovement();
+            handlePortalCollisions();
+            handleSpeedPortalCollisions();
+            handlePlatformerShipAndRobotInput();
+            handleGameModeLogic(currentGameMode);
+        }
+
+        if (!levelEnded) {
+            checkLevelEndConditions();
+        }
+    }
+
+    private void updateGameObjects() {
+        for (Tile tile : mainWindow.getPlayerPanel().getWorld().getTiles()) {
+            tile.update();
+        }
+        for (Spike spike : mainWindow.getPlayerPanel().getWorld().getSpikes()) {
+            spike.update();
+        }
+        for (Orb orb : mainWindow.getPlayerPanel().getWorld().getOrbs()) {
+            orb.update();
+        }
+        for (Pad pad : World.getPads()) {
+            pad.update();
+        }
+        for (Portal portal : mainWindow.getPlayerPanel().getWorld().getPortals()) {
+            portal.update();
+        }
+        for (SpeedPortal speedPortal : mainWindow.getPlayerPanel().getWorld().getSpeedPortals()) {
+            speedPortal.update();
+        }
+        for (LevelEnd levelEnd : mainWindow.getPlayerPanel().getWorld().getLevelEnds()) {
+            levelEnd.update();
+        }
+    }
+
+    private void checkLevelEndConditions() {
+        if (player.isPlatformer()) {
+            checkPlatformerLevelEnd();
+        } else {
+            checkNormalModeLevelEnd();
+        }
+    }
+
+    private void checkPlatformerLevelEnd() {
+        for (LevelEnd levelEnd : mainWindow.getPlayerPanel().getWorld().getLevelEnds()) {
+            double distance = Math.sqrt(
+                    Math.pow(player.getX() - levelEnd.getX() * 50, 2) +
+                            Math.pow(player.getY() - levelEnd.getY() * 50, 2)
+            );
+
+            if (distance <= 50) {
+                endLevel();
+                return;
+            }
+        }
+    }
+
+    private void checkNormalModeLevelEnd() {
+        if (levelEndX == 0) {
+            calculateLevelEnd();
+        }
+
+        if (player.getX() > levelEndX) {
+            endLevel();
+        }
+    }
+
+    private void calculateLevelEnd() {
+        double furthestX = 0;
+        World world = mainWindow.getPlayerPanel().getWorld();
+
+        for (Tile tile : world.getTiles()) {
+            furthestX = Math.max(furthestX, tile.getX() * 50);
+        }
+        for (Spike spike : world.getSpikes()) {
+            furthestX = Math.max(furthestX, spike.x() * 50);
+        }
+        for (Orb orb : world.getOrbs()) {
+            furthestX = Math.max(furthestX, orb.getX() * 50);
+        }
+        for (Pad pad : World.getPads()) {
+            furthestX = Math.max(furthestX, pad.getX() * 50);
+        }
+        for (Portal portal : world.getPortals()) {
+            furthestX = Math.max(furthestX, portal.getX() * 50);
+        }
+        for (SpeedPortal speedPortal : world.getSpeedPortals()) {
+            furthestX = Math.max(furthestX, speedPortal.getX() * 50);
+        }
+
+        levelEndX = furthestX + 200;
+    }
+
+    private void endLevel() {
+        levelEnded = true;
+        levelEndTime = System.currentTimeMillis();
+
+        mainWindow.getPlayerPanel().stopDrawingPlayer();
+        running = false;
+        SwingUtilities.invokeLater(this::showLevelCompleteDialog);
+    }
+
+    public boolean isLevelEnded() {
+        return levelEnded;
+    }
+
+    public double getLevelEndX() {
+        return levelEndX;
+    }
+
+    private void showLevelCompleteDialog() {
+        Object[] options = {"Play Again", "Exit to Main Menu"};
+        int choice = JOptionPane.showOptionDialog(
+                mainWindow,
+                "Level Complete!",
+                "Congratulations!",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+
+        if (choice == JOptionPane.YES_OPTION) {
+            resetLevel();
+            running = true;
+            gameThread = new Thread(this);
+            gameThread.start();
+        } else {
+            exitToMainMenu();
+        }
+    }
+
+    private void resetLevel() {
+        levelEnded = false;
+        levelEndTime = 0;
+        levelEndX = 0;
+        mainWindow.resetAttempts();
+        mainWindow.getPlayerPanel().resetCameraPosition();
+        resetGameState();
+        mainWindow.getPlayerPanel().resumeDrawingPlayer();
+        running = true;
+
+        if (!player.isPlatformer()) {
+            player.setPlayerSpeed(player.getDefaultPlayerSpeed());
+        }
+
+
     }
 
     private void handleSpiderOrbInput() {
@@ -316,15 +482,14 @@ public class GameEngine implements Runnable {
 
     private void handlePlatformerMovement() {
         if (player.isPlatformer()) {
+            double speed = 5;
             if (mainWindow.getPressedKeys().contains(KeyEvent.VK_A)) {
-                double newX = player.getX() - (player.isJumping() ? 6 : 5);
+                double newX = player.getX() - speed;
                 if (!mainWindow.getPlayerPanel().isCollision(newX, player.getY())) {
                     player.setX(newX);
                 }
-            }
-
-            if (mainWindow.getPressedKeys().contains(KeyEvent.VK_D)) {
-                double newX = player.getX() + (player.isJumping() ? 6 : 5);
+            } else if (mainWindow.getPressedKeys().contains(KeyEvent.VK_D)) {
+                double newX = player.getX() + speed;
                 if (!mainWindow.getPlayerPanel().isCollision(newX, player.getY())) {
                     player.setX(newX);
                 }
@@ -402,7 +567,6 @@ public class GameEngine implements Runnable {
             }
         } else {
             player.setRotationAngle((player.getRotationAngle() + (5)) % 360);
-            System.out.println("Gravity" + player.isGravityReversed() + "rotation" + player.getRotationAngle());
         }
 
         boolean isTouchingGround = mainWindow.getPlayerPanel().isCollisionWithCeilingOrFloor(player.getX(), player.getY(), player.isGravityReversed());
@@ -498,7 +662,6 @@ public class GameEngine implements Runnable {
         if (player.getOrbEffectDuration() > 0) {
             player.setOrbEffectDuration(player.getOrbEffectDuration() - 1);
 
-            System.out.println("Player velocityY: " + player.getVelocityY());
 
             if (player.getVelocityY() > player.getTargetOrbVelocity() ) {
                 player.setVelocityY(Math.max(player.getTargetOrbVelocity(), player.getVelocityY() - (1.0)));
@@ -650,8 +813,9 @@ public class GameEngine implements Runnable {
     private void handleDefaultMode() {
         if (player.isOrbEffectActive()) {
             double newY = player.getY() + player.getVelocityY();
-            if (!mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
+            if (player.getOrbEffectDuration() > 0)  {
                 player.setY(newY);
+                player.setOrbEffectDuration(player.getOrbEffectDuration() - 1);
             } else {
                 player.setOrbEffectActive(false);
             }
@@ -685,9 +849,13 @@ public class GameEngine implements Runnable {
     }
 
     private void handleJumpingState() {
+
+
         double newY = player.getY() + player.getVelocityY();
         double appliedGravity = player.isGravityReversed() ? -gravity : gravity;
         player.setVelocityY(player.getVelocityY() + appliedGravity);
+        double newX = player.getX();
+
 
         if (mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
             player.setJumping(false);
@@ -704,21 +872,21 @@ public class GameEngine implements Runnable {
         if (player.isGravityReversed()) {
             if (player.getVelocityY() < 0) {
                 while (mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
-                    newY += 2;
+                    newY += 1;
                 }
             } else {
                 while (mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
-                    newY -= 2;
+                    newY -= 1;
                 }
             }
         } else {
             if (player.getVelocityY() > 0) {
                 while (mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
-                    newY -= 2;
+                    newY -= 1;
                 }
             } else {
                 while (mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
-                    newY += 2;
+                    newY += 1;
                 }
             }
         }
@@ -726,12 +894,12 @@ public class GameEngine implements Runnable {
     }
 
     private void handleRotation() {
-        if (mainWindow.getPressedKeys().contains(KeyEvent.VK_A)) {
+        if (mainWindow.getPressedKeys().contains(KeyEvent.VK_A) && player.isPlatformer()) {
             player.setRotationAngle((player.getRotationAngle() - 5 * (player.isGravityReversed() ? -1 : 1)) % 360);
-        } else if (mainWindow.getPressedKeys().contains(KeyEvent.VK_D)) {
+        } else if (mainWindow.getPressedKeys().contains(KeyEvent.VK_D) && player.isPlatformer()) {
             player.setRotationAngle((player.getRotationAngle() + 5 * (player.isGravityReversed() ? -1 : 1)) % 360);
         } else {
-            player.setRotationAngle((player.getRotationAngle() + 3 * (player.isGravityReversed() ? -1 : 1)) % 360);
+            player.setRotationAngle((player.getRotationAngle() + 6 * (player.isGravityReversed() ? -1 : 1)) % 360);
         }
     }
 
@@ -785,9 +953,7 @@ public class GameEngine implements Runnable {
 
         if (Player.getStaticY() < panelHeight * upperThreshold - titleBarHeight - 5) {
             if (Player.getStaticY() < 55) {
-                System.out.println("Gracz poza górnym limitem");
                 cameraTargetY = Math.min(0, Player.getStaticY() - 40);
-                System.out.println("cameraTargetY: " + cameraTargetY);
             } else {
                 cameraTargetY = Math.max(0, Player.getStaticY() - 50);
             }
@@ -797,7 +963,6 @@ public class GameEngine implements Runnable {
         }
 
         cameraTargetY = Math.max(-4435, Math.min(cameraTargetY, 3500));
-        System.out.println(player.getY());
 
         double newCameraOffsetX = Math.max(cameraTargetX, -200);
         double newCameraOffsetY = cameraTargetY;
@@ -813,9 +978,37 @@ public class GameEngine implements Runnable {
     public void checkPadActivation(PlayerPanel playerPanel) {
         for (Pad pad : World.getPads()) {
             if (playerPanel.isCollision(player.getX(), player.getY(), pad.getX(), pad.getY())) {
-                System.out.println("Aktywacja pada!");
-                pad.activate(player);
+                if (pad instanceof Activatable) {
+                    ((Activatable) pad).activate(player);
+                }
             }
+        }
+    }
+
+    private void handleCheckpointCollisions() {
+        for (Checkpoint checkpoint : mainWindow.getPlayerPanel().getWorld().getCheckpoints()) {
+            if (isCollisionWithCheckpoint(player.getX(), player.getY(), checkpoint.getX(), checkpoint.getY())) {
+                checkpoint.activate(player);
+                break;
+            }
+        }
+    }
+
+    private boolean isCollisionWithCheckpoint(double playerX, double playerY, double checkpointX, double checkpointY) {
+        double playerWidth = 50;
+        double playerHeight = 50;
+        double scaledCheckpointX = checkpointX * 50;
+        double scaledCheckpointY = checkpointY * 50;
+
+        return playerX < scaledCheckpointX + 50 &&
+                playerX + playerWidth > scaledCheckpointX &&
+                playerY < scaledCheckpointY + 50 &&
+                playerY + playerHeight > scaledCheckpointY;
+    }
+
+    void handleTeleportOrbActivation(Player player, Orb orb) {
+        if (orb instanceof Activatable) {
+            ((Activatable) orb).activate(player);
         }
     }
 
@@ -876,7 +1069,7 @@ public class GameEngine implements Runnable {
         double playerWidth = 50;
         double playerHeight = 50;
         double portalWidth = 50;
-        double portalHeight = 50;
+        double portalHeight = 100;
 
         double scaledPortalX = portalX * 50;
         double scaledPortalY = portalY * 50;
@@ -913,7 +1106,6 @@ public class GameEngine implements Runnable {
 
         Orb currentOrb = mainWindow.getPlayerPanel().getActivatedOrb(player);
         if (currentOrb == null) {
-            System.out.println("Brak aktywowanego orba");
             return;
         }
 
@@ -921,7 +1113,6 @@ public class GameEngine implements Runnable {
         double playerY = player.getY();
         double nearestY = playerY;
         double minDistance = Integer.MAX_VALUE;
-        boolean surfaceFound = false;
 
         if (currentOrb.getDirection().equals("up")) {
             nearestY = getNearestY(world, playerX, playerY, nearestY, minDistance, true);
@@ -941,9 +1132,6 @@ public class GameEngine implements Runnable {
             }
         }
 
-        if (!surfaceFound) {
-            System.out.println("Brak powierzchni do teleportacji");
-        }
     }
 
     private void teleportToNearestSurfacePad(Player player, World world) {
@@ -951,18 +1139,19 @@ public class GameEngine implements Runnable {
         Pad currentPad = mainWindow.getPlayerPanel().getActivatedPad(player);
 
         if (currentPad == null) {
-            System.out.println("Brak aktywowanego pada");
             return;
         }
+
 
         double playerX = player.getX();
         double playerY = player.getY();
         double nearestY = playerY;
         double minDistance = Integer.MAX_VALUE;
 
-        if (currentPad.getDirection().equals("top")) {
+
+        if (currentPad.getPosition().equals("top")) {
             nearestY = getNearestY(world, playerX, playerY, nearestY, minDistance, true);
-        } else if (currentPad.getDirection().equals("bottom")) {
+        } else if (currentPad.getPosition().equals("bottom")) {
             nearestY = getNearestY(world, playerX, playerY, nearestY, minDistance, false);
         }
 
@@ -971,13 +1160,9 @@ public class GameEngine implements Runnable {
             player.setTeleport(false);
             player.setVelocityY(0);
             player.setJumping(false);
-
-            System.out.println(currentPad.getDirection());
-            if ("top".equals(currentPad.getDirection())) {
-                System.out.println("Grawitacja odwrócona");
+            if ("top".equals(currentPad.getPosition())) {
                 player.setGravityReversed(true);
-            } else if ("bottom".equals(currentPad.getDirection())) {
-                System.out.println("Grawitacja normalna");
+            } else if ("bottom".equals(currentPad.getPosition())) {
                 player.setGravityReversed(false);
             }
         }
