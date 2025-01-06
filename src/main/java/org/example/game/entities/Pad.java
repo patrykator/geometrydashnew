@@ -134,7 +134,7 @@ public class Pad extends GameObject implements Activatable {
             default -> throw new IllegalStateException("Nieznany kolor pada: " + color);
         };
 
-        return direction.equals("down") ? -velocityY : velocityY;
+        return position.equals("down") ? -velocityY : velocityY;
     }
 
     private int calculateEffectDuration(Player player) {
