@@ -66,4 +66,5 @@ public class Checkpoint extends GameObject implements Activatable {
     public void setActivated(boolean activated) {
         this.activated = activated;
     }
+
 }

@@ -211,7 +211,7 @@ public class PlayerPanel extends JPanel {
                         placeOrb(gridX, gridY);
                         break;
                     case 4:
-                        placePad(gridX, gridY, selectedOrbDirection);
+                        placePad(gridX, gridY);
                         break;
                     case 5:
                         placeCheckpoint(gridX, gridY);
@@ -617,7 +617,7 @@ public class PlayerPanel extends JPanel {
         repaint();
     }
 
-    private void placePad(int gridX, int gridY, String direction) {
+    private void placePad(int gridX, int gridY) {
         if (mainWindow.getGameEngine().isGamePaused()) {
             return;
         }
@@ -638,7 +638,7 @@ public class PlayerPanel extends JPanel {
                 return;
             }
         }
-        world.addPad(new Pad(adjustedGridX, adjustedGridY, selectedPadColor, selectedPadPosition, direction));
+        world.addPad(new Pad(adjustedGridX, adjustedGridY, selectedPadColor, selectedPadPosition));
         repaint();
     }
 
@@ -657,7 +657,6 @@ public class PlayerPanel extends JPanel {
         int adjustedGridY = adjustGridY(gridY, mouseY, cameraOffsetY);
 
         if (gameMode == null) {
-            System.err.println("Error: portalGameMode is null!");
             return;
         }
         for (Portal portal : world.getPortals()) {

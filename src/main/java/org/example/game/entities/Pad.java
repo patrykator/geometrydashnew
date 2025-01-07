@@ -11,18 +11,16 @@ import java.awt.*;
 
 public class Pad extends GameObject implements Activatable {
     private final String color;
-    private String direction;
     private String position;
     private long lastActivatedTime;
     private static final long COOLDOWN_TIME = 200;
 
     @JsonCreator
     public Pad(@JsonProperty("x") int x, @JsonProperty("y") int y, @JsonProperty("color") String color,
-               @JsonProperty("position") String position, @JsonProperty("direction") String direction) {
+               @JsonProperty("position") String position) {
         super(x, y);
         this.color = color;
         this.position = position;
-        this.direction = direction;
         this.lastActivatedTime = 0;
     }
 
@@ -61,10 +59,6 @@ public class Pad extends GameObject implements Activatable {
         return position;
     }
 
-    @JsonSetter("direction")
-    public void setDirection(String direction) {
-        this.direction = direction;
-    }
 
     @JsonSetter("position")
     public void setPosition(String position) {

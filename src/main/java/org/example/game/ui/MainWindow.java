@@ -265,24 +265,12 @@ public class MainWindow extends JFrame {
     }
 
     public void instantDie(Player player) {
-        resetPlayerState(player);
-        incrementAttempts();
+        player.setDead(true);
         isAnimatingDeath = false;
-        repaint();
+        resetGameAfterDeath(player);
     }
 
-    private void resetPlayerState(Player player) {
-        player.setVelocityY(0);
-        player.setX(100);
-        player.setY(playerPanel.getHeight() - 100);
-        player.setRotationAngle(0);
-        player.setGravityReversed(false);
-        playerPanel.resetCameraPosition();
-        gameEngine.resetGameState();
-        player.setCurrentGameMode(GameMode.CUBE);
-        player.setOrbEffectDuration(0);
-        player.setOrbEffectActive(false);
-    }
+
 
     public void showToolSelectionPanel(boolean show) {
         toolSelectionPanel.setVisible(show);
@@ -340,10 +328,11 @@ public class MainWindow extends JFrame {
     }
 
     public void die(Player player) {
-        getPlayerPanel().stopDrawingPlayer();
+
        player.setDead(true);
         if (!isAnimatingDeath) {
             isAnimatingDeath = true;
+            player.setDead(true);
             BufferedImage playerImage = getPlayerImage(player);
             initializeFragmentAnimation(player, playerImage);
             initiateDeathAnimationSequence(player);
@@ -408,16 +397,36 @@ public class MainWindow extends JFrame {
         if (player.getCheckpointX() != null && player.getCheckpointY() != null) {
             player.setX(player.getCheckpointX() * 50);
             player.setY(player.getCheckpointY() * 50);
+
+            if (player.getCheckpointGameMode() != null) {
+                GameMode gameMode = player.getCheckpointGameMode();
+                player.setCurrentGameMode(gameMode);
+            }
         } else {
             gameEngine.resetGameState();
         }
         getPlayerPanel().resumeDrawingPlayer();
-        player.setDead(false);
         incrementAttempts();
         isAnimatingDeath = false;
-        player.setCurrentGameMode(GameMode.CUBE);
+
+        if (player.getCheckpointX() == null || player.getCheckpointY() == null) {
+            player.setCurrentGameMode(GameMode.CUBE);
+        }
+
+        player.setJumping(false);
+        player.setVelocityY(0);
+        player.setRotationAngle(0);
+        player.setGravityReversed(false);
+        player.setShipFlipped(false);
+        player.setRobotFlipped(false);
+        player.setSpiderOrbJustActivated(false);
+        player.setOrbEffectDuration(0);
+        player.setOrbEffectActive(false);
+        player.setBlackOrbActive(false);
+
         player.setPlayerSpeed(player.getDefaultPlayerSpeed());
         repaint();
+        player.setDead(false);
     }
 
     private BufferedImage imageToBufferedImage(Image img) {

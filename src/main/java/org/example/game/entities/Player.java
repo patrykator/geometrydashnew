@@ -34,6 +34,7 @@ public class Player extends Entity implements Drawable {
     private MainWindow mainWindow;
     private Double checkpointX;
     private Double checkpointY;
+    private GameMode checkpointGameMode;
 
     public boolean isDead() {
         return !dead;
@@ -76,9 +77,18 @@ public class Player extends Entity implements Drawable {
         this.checkpointY = checkpointY;
     }
 
+    public GameMode getCheckpointGameMode() {
+        return checkpointGameMode;
+    }
+
+    public void setCheckpointGameMode(GameMode checkpointGameMode) {
+        this.checkpointGameMode = checkpointGameMode;
+    }
+
     public void resetCheckpoint() {
         this.checkpointX = null;
         this.checkpointY = null;
+        this.checkpointGameMode = null;
     }
 
     public static int getStaticY() {
@@ -110,11 +120,11 @@ public class Player extends Entity implements Drawable {
         this.spiderOrbJustActivated = spiderOrbJustActivated;
     }
 
-    public synchronized void setCurrentGameMode(GameMode gameMode) {
+    public  void setCurrentGameMode(GameMode gameMode) {
         this.currentGameMode = gameMode;
     }
 
-    public synchronized GameMode getCurrentGameMode() {
+    public  GameMode getCurrentGameMode() {
         return this.currentGameMode;
     }
 
@@ -266,6 +276,14 @@ public class Player extends Entity implements Drawable {
         }
     }
 
+    public boolean isSpiderFlipped() {
+        return robotFlipped;
+    }
+
+    public void setSpiderFlipped(boolean b) {
+        robotFlipped = b;
+    }
+
     public boolean isRobotFlipped() {
         return robotFlipped;
     }
@@ -365,7 +383,11 @@ public class Player extends Entity implements Drawable {
                 }
             } else if (this.getCurrentGameMode() == GameMode.SPIDER) {
                 if (playerPanel.getSpiderImage() != null) {
-                    if (this.isGravityReversed()) {
+                    if (this.isGravityReversed() && this.isSpiderFlipped()) {
+                        g2d.drawImage(playerPanel.getSpiderImage(), 50, 50, -50, -50, null);
+                    } else if (this.isSpiderFlipped()) {
+                        g2d.drawImage(playerPanel.getSpiderImage(), 50, 0, -50, 50, null);
+                    } else if (this.isGravityReversed()) {
                         g2d.drawImage(playerPanel.getSpiderImage(), 0, 50, 50, -50, null);
                     } else {
                         g2d.drawImage(playerPanel.getSpiderImage(), 0, 0, 50, 50, null);

@@ -277,10 +277,11 @@ public class GameEngine implements Runnable {
 
     private void updateGameLogic() {
 
+        checkGameModeChange();
         handleSpiderOrbInput();
+        setPlatformer();
 
-        boolean isPlatformer = mainWindow.getPlayerPanel().getWorld().isPlatformer();
-        player.setPlatformer(isPlatformer);
+
 
         GameMode currentGameMode = getCurrentGameMode();
 
@@ -308,6 +309,15 @@ public class GameEngine implements Runnable {
         if (!levelEnded) {
             checkLevelEndConditions();
         }
+    }
+
+    private void setPlatformer() {
+        boolean isPlatformer = mainWindow.getPlayerPanel().getWorld().isPlatformer();
+        player.setPlatformer(isPlatformer);
+    }
+
+    private void checkGameModeChange() {
+        currentGameMode = player.getCurrentGameMode();
     }
 
     private void updateGameObjects() {
@@ -536,6 +546,14 @@ public class GameEngine implements Runnable {
                 player.setRobotFlipped(true);
             } else if (mainWindow.getPressedKeys().contains(KeyEvent.VK_D)) {
                 player.setRobotFlipped(false);
+            }
+        }
+
+        if (player.isPlatformer() && currentGameMode == GameMode.SPIDER) {
+            if (mainWindow.getPressedKeys().contains(KeyEvent.VK_A)) {
+                player.setSpiderFlipped(true);
+            } else if (mainWindow.getPressedKeys().contains(KeyEvent.VK_D)) {
+                player.setSpiderFlipped(false);
             }
         }
     }
@@ -989,6 +1007,7 @@ public class GameEngine implements Runnable {
         for (Checkpoint checkpoint : mainWindow.getPlayerPanel().getWorld().getCheckpoints()) {
             if (isCollisionWithCheckpoint(player.getX(), player.getY(), checkpoint.getX(), checkpoint.getY())) {
                 checkpoint.activate(player);
+                player.setCheckpointGameMode(player.getCurrentGameMode());
                 break;
             }
         }
