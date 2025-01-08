@@ -15,7 +15,7 @@ public class GameEngine implements Runnable {
     private final Player player;
     private static boolean running = false;
     private final double gravity = 1;
-    private GameMode currentGameMode = GameMode.SHIP;
+    private GameMode currentGameMode;
     private boolean spaceOrUpPressed = false;
     private long robotBoostStartTime = 0;
     private boolean robotBoostActive = false;
@@ -25,8 +25,6 @@ public class GameEngine implements Runnable {
     private final JButton resumeButton;
     private final JButton exitLevelButton;
     private boolean levelEnded = false;
-    private long levelEndTime;
-    private static final long END_GAME_ANIMATION_DURATION = 1500;
     private double levelEndX = 0;
     private Thread gameThread;
 
@@ -128,7 +126,7 @@ public class GameEngine implements Runnable {
         resetGameState();
         mainWindow.getPlayerPanel().setDimmed(false);
 
-        mainWindow.setPlayerPosition(player, mainWindow.getPlayerPanel().getHeight());
+        MainWindow.setPlayerPosition(player, mainWindow.getPlayerPanel().getHeight());
         mainWindow.resetAttempts();
 
         setGamePaused(false);
@@ -161,7 +159,6 @@ public class GameEngine implements Runnable {
 
     private void setLevelEnded() {
         levelEnded = false;
-        levelEndTime = 0;
         levelEndX = 0;
     }
 
@@ -280,6 +277,7 @@ public class GameEngine implements Runnable {
         checkGameModeChange();
         handleSpiderOrbInput();
         setPlatformer();
+        updateGameObjects();
 
 
 
@@ -404,16 +402,12 @@ public class GameEngine implements Runnable {
 
     private void endLevel() {
         levelEnded = true;
-        levelEndTime = System.currentTimeMillis();
 
         mainWindow.getPlayerPanel().stopDrawingPlayer();
         running = false;
         SwingUtilities.invokeLater(this::showLevelCompleteDialog);
     }
-
-    public boolean isLevelEnded() {
-        return levelEnded;
-    }
+    
 
     public double getLevelEndX() {
         return levelEndX;
@@ -444,7 +438,6 @@ public class GameEngine implements Runnable {
 
     private void resetLevel() {
         levelEnded = false;
-        levelEndTime = 0;
         levelEndX = 0;
         mainWindow.resetAttempts();
         mainWindow.getPlayerPanel().resetCameraPosition();
@@ -872,7 +865,6 @@ public class GameEngine implements Runnable {
         double newY = player.getY() + player.getVelocityY();
         double appliedGravity = player.isGravityReversed() ? -gravity : gravity;
         player.setVelocityY(player.getVelocityY() + appliedGravity);
-        double newX = player.getX();
 
 
         if (mainWindow.getPlayerPanel().isCollision(player.getX(), newY)) {
@@ -964,6 +956,15 @@ public class GameEngine implements Runnable {
         int panelHeight = mainWindow.getPlayerPanel().getHeight();
         int cameraTargetX = (int) (Player.getStaticX() - (double) panelWidth / 2);
 
+        double cameraTargetY = getCameraTargetY(panelHeight);
+
+        double newCameraOffsetX = Math.max(cameraTargetX, -200);
+
+        mainWindow.getPlayerPanel().setCameraOffsetX((int) newCameraOffsetX);
+        mainWindow.getPlayerPanel().setCameraOffsetY((int) cameraTargetY);
+    }
+
+    private double getCameraTargetY(int panelHeight) {
         double cameraTargetY = mainWindow.getPlayerPanel().getCameraOffsetY();
         double upperThreshold = 0.1;
         double lowerThreshold = 0.9;
@@ -981,12 +982,7 @@ public class GameEngine implements Runnable {
         }
 
         cameraTargetY = Math.max(-4435, Math.min(cameraTargetY, 3500));
-
-        double newCameraOffsetX = Math.max(cameraTargetX, -200);
-        double newCameraOffsetY = cameraTargetY;
-
-        mainWindow.getPlayerPanel().setCameraOffsetX((int) newCameraOffsetX);
-        mainWindow.getPlayerPanel().setCameraOffsetY((int) newCameraOffsetY);
+        return cameraTargetY;
     }
 
     public boolean isGamePaused() {
@@ -996,9 +992,7 @@ public class GameEngine implements Runnable {
     public void checkPadActivation(PlayerPanel playerPanel) {
         for (Pad pad : World.getPads()) {
             if (playerPanel.isCollision(player.getX(), player.getY(), pad.getX(), pad.getY())) {
-                if (pad instanceof Activatable) {
-                    ((Activatable) pad).activate(player);
-                }
+                ((Activatable) pad).activate(player);
             }
         }
     }
@@ -1026,7 +1020,7 @@ public class GameEngine implements Runnable {
     }
 
     void handleTeleportOrbActivation(Player player, Orb orb) {
-        if (orb instanceof Activatable) {
+        if (orb != null) {
             ((Activatable) orb).activate(player);
         }
     }
